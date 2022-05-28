@@ -48,7 +48,9 @@ public class CardStack extends Card {
 
     @Override
     protected void flip(){
-        cards.forEach((card) -> {card.flip();});
+        for (Card card : cards) {
+            card.flip();
+        }
         Collections.reverse(cards);
     }
 }
