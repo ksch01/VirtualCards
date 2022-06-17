@@ -1,8 +1,10 @@
-package com.example.virtualcards.model;
+package com.example.virtualcards.model.interfaces;
+
+import com.example.virtualcards.model.GameObject;
 
 public interface ModelInterface {
 
-    void subscribeView(CardGameView view);
+    void subscribeView(ModelSubscriber view);
 
     GameObject getObject(float x, float y);
 

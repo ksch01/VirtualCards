@@ -1,13 +1,16 @@
 package com.example.virtualcards.model;
 
+import com.example.virtualcards.model.interfaces.ModelInterface;
+import com.example.virtualcards.model.interfaces.ModelSubscriber;
+
 import java.util.ArrayList;
 
-public class Model implements ModelInterface{
+public class Model implements ModelInterface {
     public static final float WIDTH = 640, HEIGHT = 360;
     public static final float MAX_STACK_DISTANCE = 12;
 
     private ArrayList<GameObject> gameObjects;
-    private CardGameView view;
+    private ModelSubscriber view;
 
     private Model instance;
 
@@ -23,7 +26,7 @@ public class Model implements ModelInterface{
     }
 
     @Override
-    public void subscribeView(CardGameView view) {
+    public void subscribeView(ModelSubscriber view) {
         this.view = view;
     }
 
@@ -55,7 +58,7 @@ public class Model implements ModelInterface{
 
         object.setPos(x,y);
 
-        view.draw(gameObjects);
+        view.update(gameObjects);
     }
 
     @Override
@@ -72,7 +75,7 @@ public class Model implements ModelInterface{
             }
         }
 
-        view.draw(gameObjects);
+        view.update(gameObjects);
     }
 
     private float clampToWidth(float x){
