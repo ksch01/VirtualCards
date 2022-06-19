@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 public class CardStack extends Card {
-    private ArrayList<Card> cards;
+    private ArrayList<Card> cards = new ArrayList<>();
 
     CardStack(float x, float y, Card.Suit suit, Card.Value value) {
         super(x, y, suit, value);

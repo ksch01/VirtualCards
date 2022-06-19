@@ -5,25 +5,37 @@ public class Card extends GameObject {
     public static final float WIDTH = 59, HEIGHT = 91;
 
     public enum Suit{
-        SPADES,
-        CLUBS,
-        HEARTS,
-        DIAMONDS
+        SPADES(3),
+        CLUBS(2),
+        HEARTS(1),
+        DIAMONDS(0);
+
+        public final int i;
+
+        Suit(int i){
+            this.i = i;
+        }
     }
     public enum Value{
-        TWO,
-        THREE,
-        FOUR,
-        FIVE,
-        SIX,
-        SEVEN,
-        EIGHT,
-        NINE,
-        TEN,
-        JACK,
-        QUEEN,
-        KING,
-        ACE
+        TWO(0),
+        THREE(1),
+        FOUR(2),
+        FIVE(3),
+        SIX(4),
+        SEVEN(5),
+        EIGHT(6),
+        NINE(7),
+        TEN(8),
+        JACK(9),
+        QUEEN(10),
+        KING(11),
+        ACE(12);
+
+        public final int i;
+
+        Value(int i){
+            this.i = i;
+        }
     }
 
     protected final Suit suit;

@@ -3,34 +3,38 @@ package com.example.virtualcards;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.view.View;
 
-import com.example.virtualcards.view.GameGLSurfaceView;
+import com.example.virtualcards.model.Model;
+import com.example.virtualcards.view.VirtualCardsView;
 
 public class MainActivity extends AppCompatActivity {
 
-    private GLSurfaceView glSurfaceView;
+    private VirtualCardsView virtualCardsView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        glSurfaceView = new GameGLSurfaceView(this);
-        setContentView(glSurfaceView);
+        virtualCardsView = new VirtualCardsView(this);
+        Model model = Model.getModel();
+        model.subscribeView(virtualCardsView.getSubscriber());
+        setContentView(virtualCardsView);
+
+        model.moveObject(model.getObject(320, 180), 320, 180);
     }
 
     @Override
     protected void onPause(){
         super.onPause();
-        glSurfaceView.onPause();
+        virtualCardsView.onPause();
     }
 
     @Override
     protected void onResume(){
         super.onResume();
-        glSurfaceView.onResume();
+        virtualCardsView.onResume();
 
         hideSystemUI();
     }

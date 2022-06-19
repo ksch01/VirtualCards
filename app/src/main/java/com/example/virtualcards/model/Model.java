@@ -12,13 +12,30 @@ public class Model implements ModelInterface {
     private ArrayList<GameObject> gameObjects;
     private ModelSubscriber view;
 
-    private Model instance;
+    private static Model instance;
 
     Model(){
         gameObjects = new ArrayList<>();
+        gameObjects.add(createFullStack());
     }
 
-    public Model getModel(){
+    private static final Card createFullStack(){
+        float centerX = (WIDTH - Card.WIDTH) * 0.5f, centerY = (HEIGHT - Card.HEIGHT) * 0.5f;
+        Card previous = null;
+        for(Card.Value value : Card.Value.values()){
+            for(Card.Suit suit : Card.Suit.values()){
+                Card current = new Card(centerX, centerY, suit, value);
+                if(previous != null){
+                    previous = CardStack.stackCards(current, previous);
+                }else{
+                    previous = current;
+                }
+            }
+        }
+        return previous;
+    }
+
+    public static Model getModel(){
         if(instance == null){
             instance = new Model();
         }
