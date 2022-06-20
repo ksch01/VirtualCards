@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 public class CardStack extends Card {
+
+    static final int ACTION_DRAW = 1;
+
     private ArrayList<Card> cards = new ArrayList<>();
 
     CardStack(float x, float y, Card.Suit suit, Card.Value value) {
@@ -28,7 +31,6 @@ public class CardStack extends Card {
         }else {
             cards.add(card);
         }
-
     }
 
     @Override
@@ -46,8 +48,15 @@ public class CardStack extends Card {
         return cards.get(0).isFaceUp();
     }
 
+    public Card popCard(){
+        Card card = cards.get(0);
+        cards.remove(0);
+        return card;
+    }
+
     @Override
     protected void flip(){
+        System.out.println("-------------------------------- FLIP PERFORMED");
         for (Card card : cards) {
             card.flip();
         }

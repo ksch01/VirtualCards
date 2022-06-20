@@ -7,7 +7,7 @@ import java.util.ArrayList;
 
 public class Model implements ModelInterface {
     public static final float WIDTH = 800, HEIGHT = 360;
-    public static final float MAX_STACK_DISTANCE = 12;
+    public static final float MAX_STACK_DISTANCE = 10 * 10;
 
     private ArrayList<GameObject> gameObjects;
     private ModelSubscriber view;
@@ -36,9 +36,8 @@ public class Model implements ModelInterface {
     }
 
     public static Model getModel(){
-        if(instance == null){
+        if(instance == null)
             instance = new Model();
-        }
         return instance;
     }
 
@@ -49,22 +48,35 @@ public class Model implements ModelInterface {
 
     @Override
     public GameObject getObject(float x, float y) {
-        int length = gameObjects.size();
-        for(int i = 0; i < length; i++){
+        int length = gameObjects.size()-1;
+        for(int i = length; i >= 0; i--){
             GameObject gameObject = gameObjects.get(i);
-            if(gameObject.isOn(x,y))
+            if(gameObject.isOn(x,y)) {
+                if(i != 0){
+                    gameObjects.remove(i);
+                    gameObjects.add(gameObject);
+                }
                 return gameObject;
+            }
         }
         return null;
     }
 
     private GameObject getObject(float x, float y, float distance, Class type){
         int length = gameObjects.size();
+
         for(int i = 0; i < length; i++){
+
             GameObject gameObject = gameObjects.get(i);
-            if(gameObject.isOn(x,y,distance) && type.isInstance(gameObject))
+            boolean isOn = gameObject.isOn(x,y,distance);
+            System.out.println("IS ON RETURNED "+isOn);
+            System.out.println("------------------------------------------------");
+
+            if(isOn && type.isInstance(gameObject)) {
                 return gameObject;
+            }
         }
+
         return null;
     }
 
@@ -89,7 +101,7 @@ public class Model implements ModelInterface {
 
         if(object instanceof Card){
             GameObject stackTo = getObject(x, y, MAX_STACK_DISTANCE, Card.class);
-            if(stackTo != null){
+            if(stackTo != object && stackTo != null){
                 gameObjects.remove(object);
                 gameObjects.remove(stackTo);
                 gameObjects.add(CardStack.stackCards((Card) object, (Card)stackTo));
@@ -97,6 +109,29 @@ public class Model implements ModelInterface {
         }
 
         view.update(gameObjects);
+    }
+
+    @Override
+    public void hitObject(GameObject object){
+        if(object == null)return;
+
+        if(object instanceof Card) {
+            ((Card) object).flip();
+            view.update(gameObjects);
+        }
+    }
+
+    @Override
+    public GameObject extractObject(GameObject object){
+        if(object == null)return null;
+
+        if(object instanceof CardStack) {
+            Card card = ((CardStack) object).popCard();
+            gameObjects.add(card);
+            view.update(gameObjects);
+            return card;
+        }else
+            return null;
     }
 
     private float clampToWidth(GameObject object, float x){

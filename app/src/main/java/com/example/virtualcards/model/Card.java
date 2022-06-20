@@ -2,6 +2,8 @@ package com.example.virtualcards.model;
 
 public class Card extends GameObject {
 
+    static final int ACTION_FLIP = 0;
+
     public static final float WIDTH = 59, HEIGHT = 91;
 
     public enum Suit{
@@ -53,14 +55,6 @@ public class Card extends GameObject {
 
     protected void flip(){
         faceUp = !faceUp;
-    }
-
-    public float getX(){
-        return x;
-    }
-
-    public float getY(){
-        return y;
     }
 
     public Suit getSuit(){

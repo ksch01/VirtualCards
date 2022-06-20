@@ -17,6 +17,7 @@ import com.example.virtualcards.view.shader.Shader;
 import com.example.virtualcards.view.texture.Texture;
 
 import java.util.ArrayList;
+import java.util.Collections;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -49,10 +50,10 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
     private VirtualCardsView view;
 
     private RenderCard[] renderCards = new RenderCard[52];
-    private RenderCardCall[] renderCardCalls = new RenderCardCall[52];
+    //private RenderCardCall[] renderCardCalls = new RenderCardCall[52];
+    private ArrayList<RenderCardCall> renderCardCalls = new ArrayList<>();
 
-    private boolean ready = false;
-    private ArrayList<GameObject> mostRecentCall = new ArrayList<>();
+    private ArrayList<GameObject> updateCall = new ArrayList<>();
 
     public VirtualCardsRenderer(Context context, VirtualCardsView view){
         this.context = context;
@@ -81,8 +82,7 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
         texture.bind(GLES20.GL_TEXTURE0);
         GLES20.glUniform1i(shader.getUniformLocation("texture_unit"), 0);
 
-        ready = true;
-        update(mostRecentCall);
+        call(updateCall);
     }
 
     @Override
@@ -94,36 +94,36 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
     public void onDrawFrame(GL10 gl10) {
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
 
-        for(int i = 0; i < renderCardCalls.length; i++){
-            RenderCardCall call = renderCardCalls[i];
-            if(call != null){
-                renderCards[i].draw(call.x, call.y, call.faceUp);
-            }
+        call(updateCall);
+
+        for(int i = 0; i < renderCardCalls.size(); i++){
+            RenderCardCall call = renderCardCalls.get(i);
+            renderCards[call.index].draw(call.x, call.y, call.faceUp);
         }
     }
 
     @Override
     public void update(ArrayList<GameObject> gameObjects) {
 
-        if(!ready){
+        updateCall = gameObjects;
 
-            mostRecentCall = gameObjects;
-        }else {
+        view.requestRender();
+    }
 
-            for (int i = 0; i < renderCardCalls.length; i++) {
-                renderCardCalls[i] = null;
-            }
-            for (GameObject object : gameObjects) {
-                if (object instanceof Card) {
-                    Card card = (Card) object;
-                    int index = card.getValue().i + card.getSuit().i * 13;
-                    renderCardCalls[index] = new RenderCardCall(card);
-                    if (renderCards[index] == null) {
-                        renderCards[index] = new RenderCard(shader, texture, card);
-                    }
+    public void call(ArrayList<GameObject> gameObjects){
+        if(gameObjects == null)return;
+
+        renderCardCalls.clear();
+        for (GameObject object : gameObjects) {
+            if (object instanceof Card) {
+                Card card = (Card) object;
+                int index = card.getValue().i + card.getSuit().i * 13;
+                renderCardCalls.add(new RenderCardCall(card, index));
+                if (renderCards[index] == null) {
+                    renderCards[index] = new RenderCard(shader, texture, card);
                 }
             }
-            view.requestRender();
         }
+        updateCall = null;
     }
 }

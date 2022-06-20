@@ -10,4 +10,6 @@ public interface ModelInterface {
 
     void moveObject(GameObject object, float x, float y);
     void dropObject(GameObject object, float x, float y);
+    void hitObject(GameObject object);
+    GameObject extractObject (GameObject object);
 }

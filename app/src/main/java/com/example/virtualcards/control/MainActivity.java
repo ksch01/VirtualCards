@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 
+import com.example.virtualcards.model.Card;
 import com.example.virtualcards.model.Model;
 import com.example.virtualcards.view.VirtualCardsView;
 
@@ -18,12 +19,14 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         Control.updateScreenModelRatio(this);
-        virtualCardsView = new VirtualCardsView(this, Control.getControl());
         Model model = Model.getModel();
+        virtualCardsView = new VirtualCardsView(this, Control.getControl(model));
         model.subscribeView(virtualCardsView.getSubscriber());
         setContentView(virtualCardsView);
 
-        model.moveObject(model.getObject(400 - 25.5f, 180 - 45.5f), 400 - 25.5f, 180 - 45.5f);
+        float x = (Model.WIDTH) * 0.5f;
+        float y = (Model.HEIGHT) * 0.5f;
+        model.moveObject(model.getObject(x,  y), x, y);
     }
 
     @Override
