@@ -6,7 +6,7 @@ import com.example.virtualcards.model.interfaces.ModelSubscriber;
 import java.util.ArrayList;
 
 public class Model implements ModelInterface {
-    public static final float WIDTH = 640, HEIGHT = 360;
+    public static final float WIDTH = 800, HEIGHT = 360;
     public static final float MAX_STACK_DISTANCE = 12;
 
     private ArrayList<GameObject> gameObjects;
@@ -70,8 +70,10 @@ public class Model implements ModelInterface {
 
     @Override
     public void moveObject(GameObject object, float x, float y) {
-        x = clampToWidth(x);
-        y = clampToHeight(y);
+        if(object == null)return;
+
+        x = clampToWidth(object, x - object.width * 0.5f);
+        y = clampToHeight(object, y - object.height * 0.5f);
 
         object.setPos(x,y);
 
@@ -80,8 +82,10 @@ public class Model implements ModelInterface {
 
     @Override
     public void dropObject(GameObject object, float x, float y){
-        x = clampToWidth(x);
-        y = clampToHeight(y);
+        if(object == null)return;
+
+        x = clampToWidth(object, x);
+        y = clampToHeight(object, y);
 
         if(object instanceof Card){
             GameObject stackTo = getObject(x, y, MAX_STACK_DISTANCE, Card.class);
@@ -95,15 +99,17 @@ public class Model implements ModelInterface {
         view.update(gameObjects);
     }
 
-    private float clampToWidth(float x){
+    private float clampToWidth(GameObject object, float x){
         if(x < 0) return 0;
-        if(x >= WIDTH) return WIDTH - 1;
+        float x1 = x + object.width;
+        if(x1 >= WIDTH) return WIDTH - object.width;
         return x;
     }
 
-    private float clampToHeight(float y){
+    private float clampToHeight(GameObject object, float y){
         if(y < 0) return 0;
-        if(y >= HEIGHT) return HEIGHT - 1;
+        float y1 = y + object.height;
+        if(y1 >= HEIGHT) return HEIGHT - object.height;
         return y;
     }
 }

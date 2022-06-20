@@ -1,4 +1,4 @@
-package com.example.virtualcards;
+package com.example.virtualcards.control;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,12 +17,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        virtualCardsView = new VirtualCardsView(this);
+        Control.updateScreenModelRatio(this);
+        virtualCardsView = new VirtualCardsView(this, Control.getControl());
         Model model = Model.getModel();
         model.subscribeView(virtualCardsView.getSubscriber());
         setContentView(virtualCardsView);
 
-        model.moveObject(model.getObject(320, 180), 320, 180);
+        model.moveObject(model.getObject(400 - 25.5f, 180 - 45.5f), 400 - 25.5f, 180 - 45.5f);
     }
 
     @Override

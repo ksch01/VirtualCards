@@ -8,6 +8,7 @@ import android.opengl.Matrix;
 import com.example.virtualcards.R;
 import com.example.virtualcards.model.Card;
 import com.example.virtualcards.model.GameObject;
+import com.example.virtualcards.model.Model;
 import com.example.virtualcards.model.interfaces.ModelSubscriber;
 import com.example.virtualcards.view.card.RenderCard;
 import com.example.virtualcards.view.card.RenderCardCall;
@@ -42,8 +43,6 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
                     //"  gl_FragColor = vec4(pass_texture_coordinate.x, 0., pass_texture_coordinate.y, 1.);" + //Debug Texture Coordinates
                     "}";
 
-    private static final int WIDTH = 800, HEIGHT = 360;
-
     private Context context;
     private Shader shader;
     private Texture texture;
@@ -76,7 +75,7 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
         Matrix.setIdentityM(projection, 0);
         GLES20.glUniformMatrix4fv(shader.getUniformLocation("M"), 1, false, projection, 0);
 
-        Matrix.orthoM(projection, 0, 0, WIDTH, 0, HEIGHT, -1, 64);
+        Matrix.orthoM(projection, 0, 0, Model.WIDTH, 0, Model.HEIGHT, -1, 64);
         GLES20.glUniformMatrix4fv(shader.getUniformLocation("P"), 1, false, projection, 0);
 
         texture.bind(GLES20.GL_TEXTURE0);
