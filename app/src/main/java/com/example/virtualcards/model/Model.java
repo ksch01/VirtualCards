@@ -22,8 +22,8 @@ public class Model implements ModelInterface {
     private static final Card createFullStack(){
         float centerX = (WIDTH - Card.WIDTH) * 0.5f, centerY = (HEIGHT - Card.HEIGHT) * 0.5f;
         Card previous = null;
-        for(Card.Value value : Card.Value.values()){
-            for(Card.Suit suit : Card.Suit.values()){
+        for(Card.Suit suit : Card.Suit.values()){
+            for(Card.Value value : Card.Value.values()){
                 Card current = new Card(centerX, centerY, suit, value);
                 if(previous != null){
                     previous = CardStack.stackCards(current, previous);
@@ -52,7 +52,7 @@ public class Model implements ModelInterface {
         for(int i = length; i >= 0; i--){
             GameObject gameObject = gameObjects.get(i);
             if(gameObject.isOn(x,y)) {
-                if(i != 0){
+                if(i != gameObjects.size()-1){
                     gameObjects.remove(i);
                     gameObjects.add(gameObject);
                 }
@@ -62,15 +62,17 @@ public class Model implements ModelInterface {
         return null;
     }
 
-    private GameObject getObject(float x, float y, float distance, Class type){
+    private GameObject getObject(GameObject object, float distance, Class type){
         int length = gameObjects.size();
 
         for(int i = 0; i < length; i++){
 
             GameObject gameObject = gameObjects.get(i);
-            boolean isOn = gameObject.isOn(x,y,distance);
-            System.out.println("IS ON RETURNED "+isOn);
-            System.out.println("------------------------------------------------");
+            if(gameObject == object){
+                continue;
+            }
+
+            boolean isOn = gameObject.isOn(object.x,object.y,distance);
 
             if(isOn && type.isInstance(gameObject)) {
                 return gameObject;
@@ -89,7 +91,7 @@ public class Model implements ModelInterface {
 
         object.setPos(x,y);
 
-        view.update(gameObjects);
+        notifySubscriber();
     }
 
     @Override
@@ -100,15 +102,16 @@ public class Model implements ModelInterface {
         y = clampToHeight(object, y);
 
         if(object instanceof Card){
-            GameObject stackTo = getObject(x, y, MAX_STACK_DISTANCE, Card.class);
-            if(stackTo != object && stackTo != null){
+            System.out.println("DROP CARD/STACK (" + x + ", " + y + ") " + object);
+            GameObject stackTo = getObject(object, MAX_STACK_DISTANCE, Card.class);
+            if(stackTo != null){
                 gameObjects.remove(object);
                 gameObjects.remove(stackTo);
                 gameObjects.add(CardStack.stackCards((Card) object, (Card)stackTo));
             }
         }
 
-        view.update(gameObjects);
+        notifySubscriber();
     }
 
     @Override
@@ -117,7 +120,7 @@ public class Model implements ModelInterface {
 
         if(object instanceof Card) {
             ((Card) object).flip();
-            view.update(gameObjects);
+            notifySubscriber();
         }
     }
 
@@ -128,10 +131,17 @@ public class Model implements ModelInterface {
         if(object instanceof CardStack) {
             Card card = ((CardStack) object).popCard();
             gameObjects.add(card);
-            view.update(gameObjects);
+            notifySubscriber();
             return card;
         }else
             return null;
+    }
+
+    private void notifySubscriber(){
+        ArrayList<GameObject> copy = new ArrayList<>(gameObjects.size());
+        for(GameObject object : gameObjects)
+            copy.add(object);
+        view.update(copy);
     }
 
     private float clampToWidth(GameObject object, float x){

@@ -65,7 +65,7 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
         GLES20.glClearColor(0.2f, 0.f, 0.2f, 1.f);
 
         shader = new Shader(vertexShaderCode, fragmentShaderCode);
-        texture = new Texture(context, R.drawable.texture_cards);
+        texture = Texture.loadTexture(context, R.drawable.texture_cards);
         float[] textureRegion = texture.region(12, 3, 59, 91);
         //rect = new Rectangle(shader, 59, 91, textureRegion[0], textureRegion[1], textureRegion[2], textureRegion[3]);
 

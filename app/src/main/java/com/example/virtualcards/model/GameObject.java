@@ -50,9 +50,8 @@ public class GameObject {
      */
     boolean isOn(float x, float y, float distance){
         if(distance < 0)return false;
-        float a = this.x - x + width * 0.5f;
-        float b = this.y - y + height * 0.5f;
-        System.out.println("POS("+this.x+", "+this.y+") TAR("+x+", "+y+")");
+        float a = this.x - x;
+        float b = this.y - y;
         return distance >= ((a * a) + (b * b));
     }
 }

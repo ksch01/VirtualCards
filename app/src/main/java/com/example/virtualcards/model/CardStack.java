@@ -56,7 +56,6 @@ public class CardStack extends Card {
 
     @Override
     protected void flip(){
-        System.out.println("-------------------------------- FLIP PERFORMED");
         for (Card card : cards) {
             card.flip();
         }
