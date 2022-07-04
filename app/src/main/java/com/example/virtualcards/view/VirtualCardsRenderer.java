@@ -24,6 +24,8 @@ import javax.microedition.khronos.opengles.GL10;
 
 public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscriber {
 
+    private static final float CLEAR_RED = 13f / 255, CLEAR_GREEN = 14f / 255, CLEAR_BLUE = 26f / 255;
+
     private final String vertexShaderCode =
             "attribute vec2 position;" +
                     "attribute vec2 texture_coordinate;"+
@@ -41,7 +43,6 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
                     "uniform sampler2D texture_unit;" +
                     "void main() {"+
                     "  gl_FragColor = texture2D(texture_unit, pass_texture_coordinate);"+
-                    //"  gl_FragColor = vec4(pass_texture_coordinate.x, 0., pass_texture_coordinate.y, 1.);" + //Debug Texture Coordinates
                     "}";
 
     private Context context;
@@ -50,7 +51,6 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
     private VirtualCardsView view;
 
     private RenderCard[] renderCards = new RenderCard[52];
-    //private RenderCardCall[] renderCardCalls = new RenderCardCall[52];
     private ArrayList<RenderCardCall> renderCardCalls = new ArrayList<>();
 
     private ArrayList<GameObject> updateCall = new ArrayList<>();
@@ -62,12 +62,10 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
 
     @Override
     public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
-        GLES20.glClearColor(0.2f, 0.f, 0.2f, 1.f);
+        GLES20.glClearColor(CLEAR_RED, CLEAR_GREEN, CLEAR_BLUE, 1.f);
 
         shader = new Shader(vertexShaderCode, fragmentShaderCode);
         texture = Texture.loadTexture(context, R.drawable.texture_cards);
-        float[] textureRegion = texture.region(12, 3, 59, 91);
-        //rect = new Rectangle(shader, 59, 91, textureRegion[0], textureRegion[1], textureRegion[2], textureRegion[3]);
 
         float[] projection = new float[16];
 
@@ -110,7 +108,7 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
         view.requestRender();
     }
 
-    public void call(ArrayList<GameObject> gameObjects){
+    private void call(ArrayList<GameObject> gameObjects){
         if(gameObjects == null)return;
 
         renderCardCalls.clear();

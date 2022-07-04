@@ -6,7 +6,7 @@ import com.example.virtualcards.model.interfaces.ModelSubscriber;
 import java.util.ArrayList;
 
 public class Model implements ModelInterface {
-    public static final float WIDTH = 800, HEIGHT = 360;
+    public static final float HEIGHT = 360, WIDTH = HEIGHT * 2.0277777f;
     public static final float MAX_STACK_DISTANCE = 10 * 10;
 
     private ArrayList<GameObject> gameObjects;

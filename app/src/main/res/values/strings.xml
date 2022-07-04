@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">VirtualCards</string>
+    <string name="btn_host">Host new Game</string>
+    <string name="btn_join">Join Game</string>
+    <string name="btn_demo">Demo</string>
+    <string name="btn_back">Back</string>
+    <string name="btn_close">Close Lobby</string>
+    <string name="btn_discoverable">Make Lobby Visible</string>
+    <string name="discovery_info_no_devices">Searching ...\nNo bluetooth devices found yet.</string>
+    <string name="connected_info_no_devices">Awaiting connections ...\nNo devices connected yet.</string>
+    <string name="btn_start">Start</string>
 </resources>
