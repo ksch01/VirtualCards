@@ -1,4 +1,4 @@
-package com.example.virtualcards.network;
+package com.example.virtualcards.network.bluetooth;
 
 import android.Manifest;
 import android.bluetooth.BluetoothServerSocket;
@@ -42,16 +42,17 @@ class BluetoothServerThread extends Thread {
             try{
                 socket = serverSocket.accept();
             }catch (IOException e){
-                Log.e(TAG, "Exception in server socket accept.", e);
+                Log.d(TAG, "Server socket accept failed.");
                 break;
             }
 
             if(socket != null){
                 Log.i(TAG, "Device has successfully connected.");
                 network.connected(socket);
-                handler.obtainMessage(0, socket.getRemoteDevice()).sendToTarget();
+                handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_CONNECTED, socket.getRemoteDevice()).sendToTarget();
             }
         }
+        network.serverClosed();
     }
 
     public void cancel(){

@@ -1,4 +1,4 @@
-package com.example.virtualcards.network;
+package com.example.virtualcards.network.bluetooth;
 
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;

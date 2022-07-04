@@ -1,4 +1,4 @@
-package com.example.virtualcards.network;
+package com.example.virtualcards.network.bluetooth;
 
 import android.Manifest;
 import android.bluetooth.BluetoothDevice;
@@ -53,12 +53,15 @@ class BluetoothClientThread extends Thread {
             socket.connect();
 
             network.connected(socket);
-            handler.obtainMessage(0, socket.getRemoteDevice()).sendToTarget();
+            handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_CONNECTED, socket.getRemoteDevice()).sendToTarget();
 
             Log.i(TAG, "Successfully connected to target device.");
         }catch (IOException connectException){
-            Log.e(TAG, "Could not connect to socket. Closing socket ...", connectException);
+            Log.d(TAG, "Could not connect to socket. Closing socket ...");
+
             cancel();
+            handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_COULD_NOT_CONNECT, socket.getRemoteDevice()).sendToTarget();
+
             return;
         }
     }

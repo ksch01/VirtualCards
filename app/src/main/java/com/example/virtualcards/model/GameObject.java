@@ -1,6 +1,10 @@
 package com.example.virtualcards.model;
 
+import java.util.UUID;
+
 public class GameObject {
+
+    public final UUID id = UUID.randomUUID();
 
     protected float x, y;
     protected float width, height;

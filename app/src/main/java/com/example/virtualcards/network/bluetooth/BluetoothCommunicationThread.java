@@ -1,4 +1,4 @@
-package com.example.virtualcards.network;
+package com.example.virtualcards.network.bluetooth;
 
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
@@ -54,12 +54,14 @@ class BluetoothCommunicationThread extends Thread{
                 int bytes = in.read(buffer);
                 Log.i(TAG, "Successfully read "+bytes+" bytes.");
 
-                handler.obtainMessage(0, bytes, -1, buffer).sendToTarget();
+                handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_MESSAGE, bytes, -1, buffer).sendToTarget();
             }catch (IOException e){
-                Log.d(TAG, "Input stream disconnected.", e);
+                Log.d(TAG, "Input stream disconnected.");
                 break;
             }
         }
+
+        handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_DISCONNECTED, socket.getRemoteDevice()).sendToTarget();
     }
 
     public void write(byte[] bytes){

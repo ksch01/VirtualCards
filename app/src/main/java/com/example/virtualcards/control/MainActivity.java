@@ -2,11 +2,11 @@ package com.example.virtualcards.control;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -15,13 +15,15 @@ import android.widget.Toast;
 
 import com.example.virtualcards.R;
 import com.example.virtualcards.model.Model;
-import com.example.virtualcards.network.BluetoothNetwork;
-import com.example.virtualcards.network.MessageReceiver;
+import com.example.virtualcards.network.VirtualCardsServer;
+import com.example.virtualcards.network.bluetooth.BluetoothNetwork;
 import com.example.virtualcards.view.VirtualCardsView;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
-public class MainActivity extends AppCompatActivity implements MessageReceiver {
+public class MainActivity extends AppCompatActivity{
 
     private VirtualCardsView virtualCardsView;
     private BluetoothNetwork network;
@@ -33,10 +35,18 @@ public class MainActivity extends AppCompatActivity implements MessageReceiver {
     private boolean connectedDevice = false;
     private LinearLayout connectedDeviceView;
     private TextView connectedInfoView;
+    private ConstraintLayout serverButtons;
+    private ConstraintLayout clientButtons;
+    private Map<BluetoothDevice, View> connectedDevices = new HashMap<>();
 
     private boolean client = false;
+    private boolean leftLobby = false;
 
     private boolean inGame;
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //      APP LIFECYCLE
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     @SuppressLint("MissingPermission")
     @Override
@@ -51,8 +61,39 @@ public class MainActivity extends AppCompatActivity implements MessageReceiver {
         network.activateBluetooth();
         network.registerDiscoveredReceiver(this::discoveredDevice);
         network.registerConnectedReceiver(this::connectedDevice);
-        network.registerMessageReceiver(this);
+        network.registerDisconnectedReceiver(this::disconnectedDevice);
+        network.registerConnectionFailedReceiver(this::connectionFailed);
+        network.registerMessageReceiver(new VirtualCardsServer(network));
     }
+
+    @Override
+    protected void onPause(){
+        super.onPause();
+
+        if(inGame)
+            virtualCardsView.onPause();
+    }
+
+    @Override
+    protected void onResume(){
+        super.onResume();
+
+        if(inGame)
+            virtualCardsView.onResume();
+
+        hideSystemUI();
+    }
+
+    @Override
+    protected void onDestroy(){
+        super.onDestroy();
+
+        network.onDestroy();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //      LAYOUT/MENU SWITCHES
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private void setContentViewMain(){
         setContentView(R.layout.main_menu);
@@ -70,7 +111,22 @@ public class MainActivity extends AppCompatActivity implements MessageReceiver {
 
         connectedDeviceView = findViewById(R.id.connectedDevices);
         connectedInfoView = findViewById(R.id.connectedInfoView);
+
+        serverButtons = findViewById(R.id.serverButtons);
+        clientButtons = findViewById(R.id.clientButtons);
+
+        if(client){
+            clientButtons.setVisibility(View.VISIBLE);
+            serverButtons.setVisibility(View.GONE);
+        }else{
+            serverButtons.setVisibility(View.VISIBLE);
+            clientButtons.setVisibility(View.GONE);
+        }
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //      UI HELPER METHODS
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private void hideSystemUI(){
         ActionBar actionBar = getSupportActionBar();
@@ -100,6 +156,7 @@ public class MainActivity extends AppCompatActivity implements MessageReceiver {
             try {
                 client = true;
                 network.openClient(device);
+                discoveredDevice = false;
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -123,32 +180,14 @@ public class MainActivity extends AppCompatActivity implements MessageReceiver {
         button.setActivated(false);
 
         connectedDeviceView.addView(button);
+        connectedDevices.put(device, button);
     }
 
-    @Override
-    protected void onPause(){
-        super.onPause();
 
-        if(inGame)
-            virtualCardsView.onPause();
-    }
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //      MAIN MENU ON CLICKS
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    @Override
-    protected void onResume(){
-        super.onResume();
-
-        if(inGame)
-            virtualCardsView.onResume();
-
-        hideSystemUI();
-    }
-
-    @Override
-    protected void onDestroy(){
-        super.onDestroy();
-
-        network.onDestroy();
-    }
 
     public void demo(View view){
         Control.updateScreenModelRatio(this);
@@ -171,11 +210,6 @@ public class MainActivity extends AppCompatActivity implements MessageReceiver {
         network.discoverDevices();
     }
 
-    public void back(View view){
-        network.stopDiscoverDevices();
-        setContentViewMain();
-    }
-
     public void host(View view){
         try {
             network.openServer();
@@ -185,6 +219,20 @@ public class MainActivity extends AppCompatActivity implements MessageReceiver {
         }
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //      DISCOVER MENU ON CLICKS
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public void back(View view){
+        network.stopDiscoverDevices();
+        discoveredDevice = false;
+        setContentViewMain();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //      LOBBY MENU ON CLICKS
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     public void makeDiscoverable(View view){
         network.makeDiscoverable(60);
     }
@@ -192,6 +240,7 @@ public class MainActivity extends AppCompatActivity implements MessageReceiver {
     public void close(View view){
         network.closeServer();
         network.closeConnections();
+        connectedDevice = false;
         setContentViewMain();
     }
 
@@ -199,10 +248,25 @@ public class MainActivity extends AppCompatActivity implements MessageReceiver {
         //TODO Stub
     }
 
+    public void leave(View view){
+        leftLobby = true;
+        network.closeConnections();
+        connectedDevice = false;
+        setContentViewMain();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //      NETWORK CALLBACKS
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     public void discoveredDevice(BluetoothDevice device) {
         if(!discoveredDevice){
@@ -211,22 +275,37 @@ public class MainActivity extends AppCompatActivity implements MessageReceiver {
 
         addDeviceToDiscoveryView(device);
         discoveredDevice = true;
-
-        Log.i("BluetoothDiscovery", device.getName() + " (" + device.getAddress() + ") discovered");
     }
 
     public void connectedDevice(BluetoothDevice device) {
+        if(client){
+            setContentViewLobby();
+        }
+
         if(!connectedDevice){
             connectedInfoView.setVisibility(View.INVISIBLE);
         }
 
         addDeviceToConnectedView(device);
-
-        Log.i("BluetoothConnect", device.getName() + " (" + device.getAddress() + ") connected");
     }
 
-    @Override
-    public void received(byte[] receivedBytes) {
+    public void disconnectedDevice(BluetoothDevice device){
+        if(client) {
+            if (!inGame) {
+                if (!leftLobby)
+                    Toast.makeText(this, R.string.tst_lobby_closed, Toast.LENGTH_LONG).show();
+                else
+                    leftLobby = false;
+                connectedDevice = false;
+                client = false;
+                setContentViewMain();
+            }
+        }else{
+            connectedDeviceView.removeView(connectedDevices.get(device));
+        }
+    }
 
+    public void connectionFailed(BluetoothDevice device){
+        Toast.makeText(this, R.string.tst_wrong_server, Toast.LENGTH_LONG).show();
     }
 }
