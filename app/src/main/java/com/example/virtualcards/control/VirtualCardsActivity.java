@@ -21,10 +21,12 @@ import com.example.virtualcards.network.bluetooth.BluetoothNetwork;
 import com.example.virtualcards.view.VirtualCardsView;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
-public class MainActivity extends AppCompatActivity{
+public class VirtualCardsActivity extends AppCompatActivity{
 
     public enum Screen {
         MENU_MAIN, MENU_DISCOVER, MENU_LOBBY, INFO_CONNECTING, GAME
@@ -33,6 +35,17 @@ public class MainActivity extends AppCompatActivity{
 
     private VirtualCardsView virtualCardsView;
     private BluetoothNetwork network;
+
+    public static final byte MESSAGE_SET_NAME = 0;
+    public static final byte MESSAGE_ACK_NAME = 1;
+    public static final byte MESSAGE_START_GAME = 2;
+
+    private Map<Byte, UUID> clients = new HashMap<>();
+    private UUID networkId = UUID.randomUUID();
+    public static final byte NAME_HOST = Byte.MIN_VALUE;
+    public static final byte NAME_NONE = Byte.MAX_VALUE;
+    private byte lastName = Byte.MIN_VALUE;
+    private byte networkName = Byte.MAX_VALUE;
 
     private boolean client = false;
     private boolean leftLobby = false;
@@ -71,6 +84,7 @@ public class MainActivity extends AppCompatActivity{
         network.registerConnectedReceiver(this::connectedDevice);
         network.registerDisconnectedReceiver(this::disconnectedDevice);
         network.registerConnectionFailedReceiver(this::connectionFailed);
+        network.registerMessageReceiver(this::receive);
     }
 
     @Override
@@ -307,7 +321,8 @@ public class MainActivity extends AppCompatActivity{
     }
 
     public void start(View view){
-        //TODO Stub
+        sendGameStarted();
+        setContentViewGame();
     }
 
     public void leave(View view){
@@ -327,6 +342,66 @@ public class MainActivity extends AppCompatActivity{
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //      NETWORK MESSAGING
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    private byte getNextName(){
+        if(lastName == NAME_NONE)return lastName;
+        return ++lastName;
+    }
+
+    private void sendName(){
+        network.send(new byte[]{MESSAGE_SET_NAME, getNextName()});
+    }
+
+    private void acknowledgeName(byte name, UUID networkId){
+        byte[] message = new byte[18];
+        ByteBuffer messageBuffer = ByteBuffer.wrap(message);
+        messageBuffer.put(MESSAGE_ACK_NAME);
+        messageBuffer.put(name);
+        messageBuffer.putLong(networkId.getMostSignificantBits());
+        messageBuffer.putLong(networkId.getLeastSignificantBits());
+        network.send(message);
+    }
+
+    private void sendGameStarted(){
+        byte[] message = new byte[1];
+        message[0] = MESSAGE_START_GAME;
+        network.send(message);
+    }
+
+    private void receive(ByteBuffer bytes){
+        switch(bytes.get()){
+            case MESSAGE_SET_NAME:
+                acknowledgeName(bytes.get(), networkId);
+                break;
+            case MESSAGE_ACK_NAME:
+                if (client){
+                    if(networkName == NAME_NONE){
+                        byte id = bytes.get();
+                        UUID toId = new UUID(bytes.getLong(), bytes.getLong());
+                        if(toId.equals(networkId)){
+                            networkName = id;
+                            Log.i("DeviceNetworkNamed", "Network name was set to " + id);
+                        }
+                        Log.i("NetworkInControl", "ack was " + id + " for " + toId + ", own is " + networkId);
+                    }
+                }
+                else {
+                    Byte name = bytes.get();
+                    if(!clients.containsKey(name)) {
+                        UUID id = new UUID(bytes.getLong(), bytes.getLong());
+                        clients.put(name, id);
+                        acknowledgeName(name, id);
+                    }
+                }
+                break;
+            case MESSAGE_START_GAME:
+                setContentViewGame();
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //      NETWORK CALLBACKS
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -342,6 +417,9 @@ public class MainActivity extends AppCompatActivity{
     public void connectedDevice(BluetoothDevice device) {
         if(client){
             setContentViewLobby();
+        }else{
+            Log.i("ServerSendName", "New device connected suggesting network name to device");
+            sendName();
         }
 
         if(!connectedDevice){
@@ -367,9 +445,9 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
-    //TODO fix in network: client connection automatically denied when not connecting for first time
+    //TODO fix in network: client connection seems to be automatically denied when not connecting for first time
     public void connectionFailed(BluetoothDevice device){
-        Log.i("ConnectionFailed", "Connection to device " + device.getName() + " (" + device.getAddress() +") failed.");
+        Log.i("ConnectionFailed", "Connection to device (" + device.getAddress() +") failed.");
         if(currentScreen == Screen.INFO_CONNECTING) {
             connectingInfo.setText(R.string.info_wrong_server);
             connectingProgressBar.setVisibility(View.GONE);

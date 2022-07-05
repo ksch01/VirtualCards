@@ -1,5 +1,7 @@
 package com.example.virtualcards.network.bluetooth.interfaces;
 
+import java.nio.ByteBuffer;
+
 public interface MessageReceiver {
-    void received(byte[] receivedBytes);
+    void receive(ByteBuffer receivedBytes);
 }

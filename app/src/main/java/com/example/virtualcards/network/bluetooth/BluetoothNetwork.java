@@ -25,6 +25,7 @@ import com.example.virtualcards.network.bluetooth.interfaces.MessageReceiver;
 import com.example.virtualcards.network.bluetooth.interfaces.MessageTransmitter;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -32,6 +33,9 @@ public class BluetoothNetwork implements MessageTransmitter {
 
     public static final String BLUETOOTH_APP_NAME = "VirtualCards";
     public static final UUID BLUETOOTH_ID = UUID.fromString("8af00d14-3643-40ac-a34d-ea501d77f660");
+
+    public static final byte MESSAGE_TARGET_NETWORK = 0;
+    public static final byte MESSAGE_TARGET_APPLICATION = 1;
 
     public static final int REQUEST_BLUETOOTH_ALL = 0;
     public static final int REQUEST_BLUETOOTH_ADVERTISE = 1;
@@ -79,7 +83,7 @@ public class BluetoothNetwork implements MessageTransmitter {
             @Override
             public void handleMessage(Message msg){
                 if(msg.what == HANDLER_TYPE_MESSAGE)
-                    received((byte[]) msg.obj);
+                    received(ByteBuffer.wrap((byte[]) msg.obj));
                 else if(msg.what == HANDLER_TYPE_CONNECTED)
                     connectedDevice((BluetoothDevice) msg.obj);
                 else if(msg.what == HANDLER_TYPE_DISCONNECTED)
@@ -174,7 +178,7 @@ public class BluetoothNetwork implements MessageTransmitter {
      * @param device the bluetooth device that was discovered
      */
     void discovered(BluetoothDevice device) {
-        if (discoveredReceiver != null) discoveredReceiver.received(device);
+        if (discoveredReceiver != null) discoveredReceiver.receive(device);
     }
 
     /**
@@ -223,15 +227,15 @@ public class BluetoothNetwork implements MessageTransmitter {
     }
 
     private void connectedDevice(BluetoothDevice device){
-        if(connectedReceiver != null) connectedReceiver.received(device);
+        if(connectedReceiver != null) connectedReceiver.receive(device);
     }
 
     private void disconnectedDevice(BluetoothDevice device){
-        if(disconnectedReceiver != null) disconnectedReceiver.received(device);
+        if(disconnectedReceiver != null) disconnectedReceiver.receive(device);
     }
 
     private void connectionFailed(BluetoothDevice device){
-        if(connectionFailedReceiver != null) connectionFailedReceiver.received(device);
+        if(connectionFailedReceiver != null) connectionFailedReceiver.receive(device);
     }
 
     /**
@@ -314,8 +318,8 @@ public class BluetoothNetwork implements MessageTransmitter {
         }
     }
 
-    void received(byte[] receivedBytes){
-        if(messageReceiver != null)messageReceiver.received(receivedBytes);
+    void received(ByteBuffer receivedBytes){
+        if(messageReceiver != null)messageReceiver.receive(receivedBytes);
     }
 
     @Override

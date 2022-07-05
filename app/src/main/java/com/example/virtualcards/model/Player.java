@@ -1,8 +1,8 @@
 package com.example.virtualcards.model;
 
 public class Player {
-    private final int id;
-    Player(int id){
+    private final byte id;
+    Player(byte id){
         this.id = id;
     }
 }

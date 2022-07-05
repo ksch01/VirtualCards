@@ -23,7 +23,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.VirtualCards">
         <activity
-            android:name=".control.MainActivity"
+            android:name=".control.VirtualCardsActivity"
             android:screenOrientation="sensorLandscape"
             android:exported="true">
             <intent-filter>
