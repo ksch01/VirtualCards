@@ -7,15 +7,16 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.virtualcards.R;
 import com.example.virtualcards.model.Model;
-import com.example.virtualcards.network.VirtualCardsServer;
 import com.example.virtualcards.network.bluetooth.BluetoothNetwork;
 import com.example.virtualcards.view.VirtualCardsView;
 
@@ -25,24 +26,33 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity{
 
+    public enum Screen {
+        MENU_MAIN, MENU_DISCOVER, MENU_LOBBY, INFO_CONNECTING, GAME
+    }
+    private Screen currentScreen;
+
     private VirtualCardsView virtualCardsView;
     private BluetoothNetwork network;
 
+    private boolean client = false;
+    private boolean leftLobby = false;
+
+    //      DISCOVERED MENU VARIABLES
     private boolean discoveredDevice = false;
     private LinearLayout discoverDeviceView;
     private TextView discoveryInfoView;
 
+    //      CONNECTION INFO SCREEN VARIABLES
+    private TextView connectingInfo;
+    private ProgressBar connectingProgressBar;
+
+    //      LOBBY MENU VARIABLES
     private boolean connectedDevice = false;
     private LinearLayout connectedDeviceView;
     private TextView connectedInfoView;
     private ConstraintLayout serverButtons;
     private ConstraintLayout clientButtons;
     private Map<BluetoothDevice, View> connectedDevices = new HashMap<>();
-
-    private boolean client = false;
-    private boolean leftLobby = false;
-
-    private boolean inGame;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //      APP LIFECYCLE
@@ -53,8 +63,6 @@ public class MainActivity extends AppCompatActivity{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        inGame = false;
-
         setContentViewMain();
 
         network = BluetoothNetwork.getNetwork(this);
@@ -63,14 +71,13 @@ public class MainActivity extends AppCompatActivity{
         network.registerConnectedReceiver(this::connectedDevice);
         network.registerDisconnectedReceiver(this::disconnectedDevice);
         network.registerConnectionFailedReceiver(this::connectionFailed);
-        network.registerMessageReceiver(new VirtualCardsServer(network));
     }
 
     @Override
     protected void onPause(){
         super.onPause();
 
-        if(inGame)
+        if(currentScreen == Screen.GAME)
             virtualCardsView.onPause();
     }
 
@@ -78,7 +85,7 @@ public class MainActivity extends AppCompatActivity{
     protected void onResume(){
         super.onResume();
 
-        if(inGame)
+        if(currentScreen == Screen.GAME)
             virtualCardsView.onResume();
 
         hideSystemUI();
@@ -92,11 +99,12 @@ public class MainActivity extends AppCompatActivity{
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //      LAYOUT/MENU SWITCHES
+    //      CONTENT VIEW SWITCHES
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private void setContentViewMain(){
         setContentView(R.layout.main_menu);
+        currentScreen = Screen.MENU_MAIN;
     }
 
     private void setContentViewDiscovery(){
@@ -104,6 +112,17 @@ public class MainActivity extends AppCompatActivity{
 
         discoverDeviceView = findViewById(R.id.discoveredDevices);
         discoveryInfoView = findViewById(R.id.discoveryInfo);
+
+        currentScreen = Screen.MENU_DISCOVER;
+    }
+
+    private void setContentViewConnecting(){
+        setContentView(R.layout.discovery_connecting);
+
+        connectingInfo = findViewById(R.id.connectingInfo);
+        connectingProgressBar = findViewById(R.id.progressBar);
+
+        currentScreen = Screen.INFO_CONNECTING;
     }
 
     private void setContentViewLobby(){
@@ -122,10 +141,27 @@ public class MainActivity extends AppCompatActivity{
             serverButtons.setVisibility(View.VISIBLE);
             clientButtons.setVisibility(View.GONE);
         }
+
+        currentScreen = Screen.MENU_LOBBY;
+    }
+
+    private void setContentViewGame(){
+        Control.updateScreenModelRatio(this);
+        Model model = Model.getModel();
+        virtualCardsView = new VirtualCardsView(this, Control.getControl(model));
+        model.subscribeView(virtualCardsView.getSubscriber());
+
+        float x = (Model.WIDTH) * 0.5f;
+        float y = (Model.HEIGHT) * 0.5f;
+        model.moveObject(model.getObject(x,  y), x, y);
+
+        setContentView(virtualCardsView);
+
+        currentScreen = Screen.GAME;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //      UI HELPER METHODS
+    //      HELPER METHODS
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     private void hideSystemUI(){
@@ -146,15 +182,22 @@ public class MainActivity extends AppCompatActivity{
 
         Button button = new Button(this);
 
+        String name;
         if(deviceName != null){
-            button.setText(deviceName);
+            name = deviceName;
         }else{
-            button.setText(deviceMac);
+            name = deviceMac;
         }
+        button.setText(name);
 
         button.setOnClickListener(view -> {
             try {
                 client = true;
+
+                setContentViewConnecting();
+                connectingInfo.setText("connecting to " + name);
+                connectingProgressBar.setVisibility(View.VISIBLE);
+
                 network.openClient(device);
                 discoveredDevice = false;
             } catch (IOException e) {
@@ -183,6 +226,28 @@ public class MainActivity extends AppCompatActivity{
         connectedDevices.put(device, button);
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //      SYSTEM UI ON CLICKS
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    @Override
+    public void onBackPressed(){
+        if(currentScreen == Screen.MENU_MAIN)
+            super.onBackPressed();
+
+        else if(currentScreen == Screen.MENU_LOBBY){
+            if(client)
+                leave(null);
+            else
+                close(null);
+        }
+
+        else if(currentScreen == Screen.MENU_DISCOVER)
+            back(null);
+
+        else if(currentScreen == Screen.INFO_CONNECTING)
+            cancel(null);
+    }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //      MAIN MENU ON CLICKS
@@ -190,17 +255,7 @@ public class MainActivity extends AppCompatActivity{
 
 
     public void demo(View view){
-        Control.updateScreenModelRatio(this);
-        Model model = Model.getModel();
-        virtualCardsView = new VirtualCardsView(this, Control.getControl(model));
-        model.subscribeView(virtualCardsView.getSubscriber());
-        setContentView(virtualCardsView);
-
-        float x = (Model.WIDTH) * 0.5f;
-        float y = (Model.HEIGHT) * 0.5f;
-        model.moveObject(model.getObject(x,  y), x, y);
-
-        inGame = true;
+        setContentViewGame();
     }
 
     public void join(View view){
@@ -220,13 +275,20 @@ public class MainActivity extends AppCompatActivity{
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //      DISCOVER MENU ON CLICKS
+    //      DISCOVER MENU/ CONNECTION INFO ON CLICKS
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     public void back(View view){
         network.stopDiscoverDevices();
         discoveredDevice = false;
         setContentViewMain();
+    }
+
+    public void cancel(View view){
+        network.closeConnections();
+        client = false;
+
+        join(null);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -291,9 +353,9 @@ public class MainActivity extends AppCompatActivity{
 
     public void disconnectedDevice(BluetoothDevice device){
         if(client) {
-            if (!inGame) {
+            if (!(currentScreen == Screen.GAME)) {
                 if (!leftLobby)
-                    Toast.makeText(this, R.string.tst_lobby_closed, Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, R.string.info_lobby_closed, Toast.LENGTH_LONG).show();
                 else
                     leftLobby = false;
                 connectedDevice = false;
@@ -305,7 +367,12 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
+    //TODO fix in network: client connection automatically denied when not connecting for first time
     public void connectionFailed(BluetoothDevice device){
-        Toast.makeText(this, R.string.tst_wrong_server, Toast.LENGTH_LONG).show();
+        Log.i("ConnectionFailed", "Connection to device " + device.getName() + " (" + device.getAddress() +") failed.");
+        if(currentScreen == Screen.INFO_CONNECTING) {
+            connectingInfo.setText(R.string.info_wrong_server);
+            connectingProgressBar.setVisibility(View.GONE);
+        }
     }
 }

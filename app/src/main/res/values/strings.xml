@@ -5,12 +5,13 @@
     <string name="btn_demo">Demo</string>
     <string name="btn_back">Back</string>
     <string name="btn_close">Close Lobby</string>
+    <string name="btn_cancel">Cancel</string>
     <string name="btn_discoverable">Make Lobby Visible</string>
-    <string name="discovery_info_no_devices">Searching ...\nNo bluetooth devices found yet.</string>
-    <string name="connected_info_no_devices">Awaiting connections ...\nNo devices connected yet.</string>
+    <string name="discovery_info_no_devices">Searching …\nNo bluetooth devices found yet.</string>
+    <string name="connected_info_no_devices">Awaiting connections …\nNo devices connected yet.</string>
     <string name="btn_start">Start</string>
     <string name="btn_leave">Leave</string>
 
-    <string name="tst_lobby_closed">The lobby has been closed by the host.</string>
-    <string name="tst_wrong_server">The selected device does not seem to run a virtual cards server.</string>
+    <string name="info_lobby_closed">The lobby has been closed by the host.</string>
+    <string name="info_wrong_server">The selected device does not seem to run a virtual cards server.</string>
 </resources>

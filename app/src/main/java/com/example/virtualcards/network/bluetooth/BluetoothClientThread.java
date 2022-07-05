@@ -60,7 +60,7 @@ class BluetoothClientThread extends Thread {
             Log.d(TAG, "Could not connect to socket. Closing socket ...");
 
             cancel();
-            handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_COULD_NOT_CONNECT, socket.getRemoteDevice()).sendToTarget();
+            handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_CONNECTION_FAILED, socket.getRemoteDevice()).sendToTarget();
 
             return;
         }

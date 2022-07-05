@@ -41,7 +41,7 @@ public class BluetoothNetwork implements MessageTransmitter {
     protected static final int HANDLER_TYPE_MESSAGE = 0;
     protected static final int HANDLER_TYPE_CONNECTED = 1;
     protected static final int HANDLER_TYPE_DISCONNECTED = 2;
-    protected static final int HANDLER_TYPE_COULD_NOT_CONNECT = 3;
+    protected static final int HANDLER_TYPE_CONNECTION_FAILED = 3;
 
     private AppCompatActivity activity;
     private BluetoothAdapter bluetoothAdapter;
@@ -84,8 +84,8 @@ public class BluetoothNetwork implements MessageTransmitter {
                     connectedDevice((BluetoothDevice) msg.obj);
                 else if(msg.what == HANDLER_TYPE_DISCONNECTED)
                     disconnectedDevice((BluetoothDevice) msg.obj);
-                else if(msg.what == HANDLER_TYPE_COULD_NOT_CONNECT)
-                    couldNotConnectDevice((BluetoothDevice) msg.obj);
+                else if(msg.what == HANDLER_TYPE_CONNECTION_FAILED)
+                    connectionFailed((BluetoothDevice) msg.obj);
             }
         };
 
@@ -148,8 +148,15 @@ public class BluetoothNetwork implements MessageTransmitter {
             permissions.add(Manifest.permission.BLUETOOTH_SCAN);
         if (activity.checkSelfPermission(Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED)
             permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE);
-        if (Build.VERSION.SDK_INT <= 28 && activity.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-            permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+        if (Build.VERSION.SDK_INT <= 28) {
+            if (activity.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+            }
+        }else{
+            if (activity.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
+            }
+        }
         activity.requestPermissions(permissions.toArray(new String[0]), REQUEST_BLUETOOTH_ALL);
     }
 
@@ -223,7 +230,7 @@ public class BluetoothNetwork implements MessageTransmitter {
         if(disconnectedReceiver != null) disconnectedReceiver.received(device);
     }
 
-    private void couldNotConnectDevice(BluetoothDevice device){
+    private void connectionFailed(BluetoothDevice device){
         if(connectionFailedReceiver != null) connectionFailedReceiver.received(device);
     }
 
