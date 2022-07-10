@@ -6,8 +6,12 @@ import java.util.UUID;
 
 public class NetworkData {
 
+    public enum Role{
+        SERVER,
+        CLIENT
+    }
     public enum Operation {
-        GET((byte)0, PayloadType.GAME_OBJECT),
+        GET((byte)0, PayloadType.GAME_OBJECT_AND_PLAYER),
         MOVE((byte)1, PayloadType.GAME_OBJECT_AND_COORDINATES),
         DROP((byte)2, PayloadType.GAME_OBJECT_AND_COORDINATES),
         HIT((byte)3, PayloadType.GAME_OBJECT),
@@ -35,17 +39,20 @@ public class NetworkData {
     private enum PayloadType {
         GAME_OBJECT,
         GAME_OBJECT_AND_COORDINATES,
+        GAME_OBJECT_AND_PLAYER,
         GAME_OBJECTS
     }
     public static class Payload{
         public final Operation operation;
         public final float x, y;
+        public final byte player;
         private final UUID[] gameObjects;
 
-        private Payload(Operation operation, UUID[] gameObjects, float x, float y){
+        private Payload(Operation operation, UUID[] gameObjects, float x, float y, byte player){
             this.operation = operation;
             this.x = x;
             this.y = y;
+            this.player = player;
             this.gameObjects = gameObjects;
         }
 
@@ -54,23 +61,23 @@ public class NetworkData {
         }
     }
 
-    static Payload deserialize(byte[] data){
-        ByteBuffer buffer = ByteBuffer.wrap(data);
+    static Payload deserialize(ByteBuffer buffer){
         Operation operation = Operation.getOperation(buffer.get());
         switch(operation.payload){
             case GAME_OBJECT: return getPayloadObject(operation, buffer);
             case GAME_OBJECTS: return getPayloadObjects(operation, buffer);
             case GAME_OBJECT_AND_COORDINATES: return getPayloadObjectCoords(operation, buffer);
+            case GAME_OBJECT_AND_PLAYER: return getPayloadObjectPlayer(operation, buffer);
         }
         throw new IllegalArgumentException("Payload could not be deserialized from data");
     }
 
     private static Payload getPayloadObject(Operation operation, ByteBuffer buffer){
-        return new Payload(operation, new UUID[]{getUUID(buffer)}, Float.MIN_VALUE, Float.MIN_VALUE);
+        return new Payload(operation, new UUID[]{getUUID(buffer)}, Float.MIN_VALUE, Float.MIN_VALUE, Byte.MIN_VALUE);
     }
 
     private static Payload getPayloadObjectCoords(Operation operation, ByteBuffer buffer){
-        return new Payload(operation, new UUID[]{getUUID(buffer)}, buffer.getFloat(), buffer.getFloat());
+        return new Payload(operation, new UUID[]{getUUID(buffer)}, buffer.getFloat(), buffer.getFloat(), Byte.MIN_VALUE);
     }
 
     private static Payload getPayloadObjects(Operation operation, ByteBuffer buffer){
@@ -78,7 +85,11 @@ public class NetworkData {
         while(buffer.hasRemaining()){
             gameObjects.add(getUUID(buffer));
         }
-        return new Payload(operation, gameObjects.toArray(new UUID[0]), Float.MIN_VALUE, Float.MIN_VALUE);
+        return new Payload(operation, gameObjects.toArray(new UUID[0]), Float.MIN_VALUE, Float.MIN_VALUE, Byte.MIN_VALUE);
+    }
+
+    private static Payload getPayloadObjectPlayer(Operation operation, ByteBuffer buffer){
+        return new Payload(operation, new UUID[]{getUUID(buffer)}, Float.MIN_VALUE, Float.MIN_VALUE, buffer.get());
     }
 
     private static UUID getUUID(ByteBuffer buffer){
@@ -86,7 +97,7 @@ public class NetworkData {
     }
 
     static byte[] serialize(Operation operation, UUID gameObjectId){
-        assert operation.payload == PayloadType.GAME_OBJECT : "Get data for operation \""+operation.name()+"\" called for wrong parameters.";
+        assert operation.payload == PayloadType.GAME_OBJECT: "Get data for operation \""+operation.name()+"\" called for wrong parameters.";
 
         byte[] data = new byte[17];
         ByteBuffer buffer = ByteBuffer.wrap(data);
@@ -109,6 +120,20 @@ public class NetworkData {
         buffer.putLong(gameObjectId.getLeastSignificantBits());
         buffer.putFloat(x);
         buffer.putFloat(y);
+
+        return data;
+    }
+
+    static byte[] serialize(Operation operation, UUID gameObjectId, byte playerId){
+        assert operation.payload == PayloadType.GAME_OBJECT_AND_PLAYER : "Get data for operation \""+operation.name()+"\" called for wrong parameters.";
+
+        byte[] data = new byte[18];
+        ByteBuffer buffer = ByteBuffer.wrap(data);
+
+        buffer.put(operation.id);
+        buffer.putLong(gameObjectId.getMostSignificantBits());
+        buffer.putLong(gameObjectId.getLeastSignificantBits());
+        buffer.put(playerId);
 
         return data;
     }

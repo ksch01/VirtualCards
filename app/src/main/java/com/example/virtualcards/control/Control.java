@@ -1,22 +1,20 @@
 package com.example.virtualcards.control;
 
 import android.content.Context;
-import android.graphics.Point;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.Display;
 import android.view.MotionEvent;
 import android.view.WindowManager;
 
 import com.example.virtualcards.model.GameObject;
-import com.example.virtualcards.model.Model;
+import com.example.virtualcards.model.TableModel;
 import com.example.virtualcards.model.interfaces.ModelInterface;
 import com.example.virtualcards.view.MotionControl;
 
 public class Control implements MotionControl {
 
     public static final float DEFAULT_DISPLAY_WIDTH = 1920, DEFAULT_DISPLAY_HEIGHT = 1080;
-    public static final float DEFAULT_RATIO_WIDTH = Model.WIDTH / DEFAULT_DISPLAY_WIDTH, DEFAULT_RATIO_HEIGHT = Model.HEIGHT / DEFAULT_DISPLAY_HEIGHT;
+    public static final float DEFAULT_RATIO_WIDTH = TableModel.WIDTH / DEFAULT_DISPLAY_WIDTH, DEFAULT_RATIO_HEIGHT = TableModel.HEIGHT / DEFAULT_DISPLAY_HEIGHT;
     private static final float MAGIC_WIDTH_FAULT_KILLER = 0.95f;
 
     /**
@@ -104,11 +102,15 @@ public class Control implements MotionControl {
         return true;
     }
 
+    public void obtainObjectAsynchronously(GameObject gameObject){
+        this.selectedObject = gameObject;
+    }
+
     private static float modelX(float screenX){
         return screenX * ratio[0];
     }
     private static float modelY(float screenY){
-        return Model.HEIGHT - screenY * ratio[1];
+        return TableModel.HEIGHT - screenY * ratio[1];
     }
 
     public static void updateScreenModelRatio(Context context){
@@ -119,8 +121,8 @@ public class Control implements MotionControl {
         float pixelHeight = metrics.heightPixels;
 
         //TODO fix width fault on certain devices
-        ratio[0] = Model.WIDTH / pixelWidth * MAGIC_WIDTH_FAULT_KILLER;
-        ratio[1] = Model.HEIGHT / pixelHeight;
+        ratio[0] = TableModel.WIDTH / pixelWidth * MAGIC_WIDTH_FAULT_KILLER;
+        ratio[1] = TableModel.HEIGHT / pixelHeight;
         Log.i("Control", "Mapped screen model ratio ("+ratio[0]+", "+ratio[1]+") with screen pixels ("+pixelWidth+", "+pixelHeight+")");
     }
 }

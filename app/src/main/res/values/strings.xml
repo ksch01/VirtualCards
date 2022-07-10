@@ -9,6 +9,7 @@
     <string name="btn_discoverable">Make Lobby Visible</string>
     <string name="discovery_info_no_devices">Searching …\nNo bluetooth devices found yet.</string>
     <string name="connected_info_no_devices">Awaiting connections …\nNo devices connected yet.</string>
+    <string name="connecting_info">connecting to %1$s</string>
     <string name="btn_start">Start</string>
     <string name="btn_leave">Leave</string>
 

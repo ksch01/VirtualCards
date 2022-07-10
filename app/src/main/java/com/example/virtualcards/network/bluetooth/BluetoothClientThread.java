@@ -22,7 +22,7 @@ class BluetoothClientThread extends Thread {
     private final BluetoothNetwork network;
     private final Handler handler;
 
-    public BluetoothClientThread(@NonNull BluetoothNetwork network, @NonNull BluetoothDevice device) {
+    BluetoothClientThread(@NonNull BluetoothNetwork network, @NonNull BluetoothDevice device) {
         super();
 
         this.network = network;
@@ -53,11 +53,8 @@ class BluetoothClientThread extends Thread {
             socket.connect();
 
             network.connected(socket);
-            handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_CONNECTED, socket.getRemoteDevice()).sendToTarget();
-
-            Log.i(TAG, "Successfully connected to target device.");
+            handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_CONNECTED, new Object[]{BluetoothNetwork.BLUETOOTH_ID, socket.getRemoteDevice()}).sendToTarget();
         }catch (IOException connectException){
-            Log.d(TAG, "Could not connect to socket. Closing socket ...");
 
             cancel();
             handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_CONNECTION_FAILED, socket.getRemoteDevice()).sendToTarget();
@@ -66,7 +63,7 @@ class BluetoothClientThread extends Thread {
         }
     }
 
-    public void cancel(){
+    void cancel(){
         try{
             socket.close();
         }catch (IOException e){

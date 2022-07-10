@@ -20,47 +20,62 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
-import com.example.virtualcards.network.bluetooth.interfaces.DeviceReceiver;
+import com.example.virtualcards.network.bluetooth.interfaces.BluetoothNetworkEventReceiver;
 import com.example.virtualcards.network.bluetooth.interfaces.MessageReceiver;
 import com.example.virtualcards.network.bluetooth.interfaces.MessageTransmitter;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class BluetoothNetwork implements MessageTransmitter {
 
+    private static final String LOG_TAG = "BluetoothNetwork";
+
     public static final String BLUETOOTH_APP_NAME = "VirtualCards";
     public static final UUID BLUETOOTH_ID = UUID.fromString("8af00d14-3643-40ac-a34d-ea501d77f660");
 
-    public static final byte MESSAGE_TARGET_NETWORK = 0;
-    public static final byte MESSAGE_TARGET_APPLICATION = 1;
+    public static final UUID DEVICE_NETWORK_ID = UUID.randomUUID();
 
-    public static final int REQUEST_BLUETOOTH_ALL = 0;
-    public static final int REQUEST_BLUETOOTH_ADVERTISE = 1;
-    public static final int REQUEST_BLUETOOTH_SCAN = 2;
-    public static final int REQUEST_BLUETOOTH_CONNECT = 3;
+    /**
+     * Event codes for {@link BluetoothNetworkEventReceiver}
+     */
+    public static final int EVENT_CODE_DISCOVERED = 0,
+        EVENT_CODE_CONNECTED = 1,
+        EVENT_CODE_DISCONNECTED = 2,
+        EVENT_CODE_CONNECTION_FAILED = 3;
 
-    protected static final int HANDLER_TYPE_MESSAGE = 0;
-    protected static final int HANDLER_TYPE_CONNECTED = 1;
-    protected static final int HANDLER_TYPE_DISCONNECTED = 2;
-    protected static final int HANDLER_TYPE_CONNECTION_FAILED = 3;
+    /**
+     * Permission request codes
+     */
+    public static final int REQUEST_BLUETOOTH_ALL = 0,
+        REQUEST_BLUETOOTH_ADVERTISE = 1,
+        REQUEST_BLUETOOTH_SCAN = 2,
+        REQUEST_BLUETOOTH_CONNECT = 3;
 
-    private AppCompatActivity activity;
-    private BluetoothAdapter bluetoothAdapter;
+    /**
+     * Handler message codes
+     */
+    protected static final int HANDLER_TYPE_MESSAGE = 0,
+        HANDLER_TYPE_CONNECTED = 2,
+        HANDLER_TYPE_DISCONNECTED = 3,
+        HANDLER_TYPE_CONNECTION_FAILED = 4;
+
+    private final AppCompatActivity activity;
+    private final BluetoothAdapter bluetoothAdapter;
 
     private static BluetoothNetwork instance;
     private final ArrayList<BroadcastReceiver> broadcastReceivers = new ArrayList<>();
-    private ArrayList<BluetoothCommunicationThread> communicationThreads = new ArrayList<>();
+    private final Map<UUID, BluetoothCommunicationThread> communicationThreadMap = new HashMap<>();
 
     private BluetoothServerThread serverThread = null;
     private BluetoothClientThread clientThread = null;
 
-    private DeviceReceiver discoveredReceiver;
-    private DeviceReceiver connectedReceiver;
-    private DeviceReceiver disconnectedReceiver;
-    private DeviceReceiver connectionFailedReceiver;
+    private BluetoothNetworkEventReceiver eventReceiver;
     private MessageReceiver messageReceiver;
 
     private boolean openServer = false;
@@ -83,11 +98,13 @@ public class BluetoothNetwork implements MessageTransmitter {
             @Override
             public void handleMessage(Message msg){
                 if(msg.what == HANDLER_TYPE_MESSAGE)
-                    received(ByteBuffer.wrap((byte[]) msg.obj));
-                else if(msg.what == HANDLER_TYPE_CONNECTED)
-                    connectedDevice((BluetoothDevice) msg.obj);
+                    received(ByteBuffer.wrap((byte[]) msg.obj).asReadOnlyBuffer());
+                else if(msg.what == HANDLER_TYPE_CONNECTED) {
+                    Object[] content = (Object[])msg.obj;
+                    connectedDevice((UUID) content[0], (BluetoothDevice) content[1]);
+                }
                 else if(msg.what == HANDLER_TYPE_DISCONNECTED)
-                    disconnectedDevice((BluetoothDevice) msg.obj);
+                    disconnectedThread((BluetoothCommunicationThread) msg.obj);
                 else if(msg.what == HANDLER_TYPE_CONNECTION_FAILED)
                     connectionFailed((BluetoothDevice) msg.obj);
             }
@@ -164,21 +181,12 @@ public class BluetoothNetwork implements MessageTransmitter {
         activity.requestPermissions(permissions.toArray(new String[0]), REQUEST_BLUETOOTH_ALL);
     }
 
-    /**
-     * Registers the specified device receiver.
-     * Whenever a new device is discovered the instance of the discovered device is passed to the last registered receiver.
-     * @param discoveryReceiver receiver that should receive info on new discovered devices.
-     */
-    public void registerDiscoveredReceiver(DeviceReceiver discoveryReceiver) {
-        this.discoveredReceiver = discoveryReceiver;
+    public void registerEventReceiver(BluetoothNetworkEventReceiver eventReceiver) {
+        this.eventReceiver = eventReceiver;
     }
 
-    /**
-     * Is called whenever a device is discovered by bluetooth discovery
-     * @param device the bluetooth device that was discovered
-     */
-    void discovered(BluetoothDevice device) {
-        if (discoveredReceiver != null) discoveredReceiver.receive(device);
+    void discovered(BluetoothDevice device){
+        if(eventReceiver != null)eventReceiver.receive(EVENT_CODE_DISCOVERED, null, device);
     }
 
     /**
@@ -197,7 +205,6 @@ public class BluetoothNetwork implements MessageTransmitter {
     /**
      * Starts the bluetooth discovery.
      * Whenever a new device is discovered it will be submitted to the registered device receiver.
-     * @see #registerDiscoveredReceiver(DeviceReceiver)
      */
     public void discoverDevices() {
         Log.i("BluetoothDiscovery", "Started Discovery");
@@ -226,16 +233,24 @@ public class BluetoothNetwork implements MessageTransmitter {
         this.messageReceiver = receiver;
     }
 
-    private void connectedDevice(BluetoothDevice device){
-        if(connectedReceiver != null) connectedReceiver.receive(device);
+    private void connectedDevice(UUID deviceId, BluetoothDevice device){
+        if(eventReceiver != null) eventReceiver.receive(EVENT_CODE_CONNECTED, deviceId, device);
     }
 
-    private void disconnectedDevice(BluetoothDevice device){
-        if(disconnectedReceiver != null) disconnectedReceiver.receive(device);
+    private void disconnectedThread(BluetoothCommunicationThread thread){
+        if(eventReceiver != null) {
+            for (Map.Entry<UUID, BluetoothCommunicationThread> entry : communicationThreadMap.entrySet()) {
+                if (entry.getValue().equals(thread)) {
+                    communicationThreadMap.remove(entry.getKey());
+                    eventReceiver.receive(EVENT_CODE_DISCONNECTED, entry.getKey(), thread.getDevice());
+                    return;
+                }
+            }
+        }
     }
 
     private void connectionFailed(BluetoothDevice device){
-        if(connectionFailedReceiver != null) connectionFailedReceiver.receive(device);
+        if(eventReceiver != null) eventReceiver.receive(EVENT_CODE_CONNECTION_FAILED, null, device);
     }
 
     /**
@@ -243,35 +258,26 @@ public class BluetoothNetwork implements MessageTransmitter {
      * @param socket the returned socket of the connection
      */
     void connected(BluetoothSocket socket) {
-        BluetoothCommunicationThread communicationThread = new BluetoothCommunicationThread(handler, socket);
-        communicationThreads.add(communicationThread);
+        BluetoothCommunicationThread communicationThread;
+        if(openServer) {
+            communicationThread = new BluetoothCommunicationThread(this, socket, true);
+        }else{
+            communicationThread = new BluetoothCommunicationThread(this, socket);
+        }
         communicationThread.start();
+        if(!openServer) {
+            communicationThreadMap.put(BLUETOOTH_ID, communicationThread);
+
+            Log.d(LOG_TAG,"Send message with id: " + DEVICE_NETWORK_ID);
+            byte[] idBytes = new byte[16];
+            ByteBuffer buffer = ByteBuffer.wrap(idBytes);
+            buffer.putLong(DEVICE_NETWORK_ID.getMostSignificantBits()).putLong(DEVICE_NETWORK_ID.getLeastSignificantBits());
+            communicationThread.write(idBytes);
+        }
     }
 
     void serverClosed(){
         openServer = false;
-    }
-
-    /**
-     * Registers the specified connected receiver.
-     * Whenever a new device connected to the device running this network the connected device is passed to the last registered receiver.
-     * @param connectedReceiver
-     */
-    public void registerConnectedReceiver(DeviceReceiver connectedReceiver){
-        this.connectedReceiver = connectedReceiver;
-    }
-
-    /**
-     * Registers the specified disconnected receiver.
-     * Whenever a device that was connected is disconnected, no matter which side cut the connection, the device is passed to the last registered receiver.
-     * @param disconnectedReceiver
-     */
-    public void registerDisconnectedReceiver(DeviceReceiver disconnectedReceiver){
-        this.disconnectedReceiver = disconnectedReceiver;
-    }
-
-    public void registerConnectionFailedReceiver(DeviceReceiver connectionFailedReceiver){
-        this.connectionFailedReceiver = connectionFailedReceiver;
     }
 
     /**
@@ -313,20 +319,49 @@ public class BluetoothNetwork implements MessageTransmitter {
         if(clientThread != null){
             clientThread.cancel();
         }
-        for(BluetoothCommunicationThread communicationThread : communicationThreads){
+        for(BluetoothCommunicationThread communicationThread : communicationThreadMap.values()){
             communicationThread.cancel();
         }
     }
 
     void received(ByteBuffer receivedBytes){
-        if(messageReceiver != null)messageReceiver.receive(receivedBytes);
+        Log.d("BTMessageReceived", "Message received.");
+        if (messageReceiver != null) messageReceiver.receive(receivedBytes);
+    }
+
+    void receivedDirect(BluetoothCommunicationThread origin, byte[] receivedBytes){
+
+        ByteBuffer buffer = ByteBuffer.wrap(receivedBytes);
+        UUID receivedId = new UUID(buffer.getLong(), buffer.getLong());
+
+        Log.d(LOG_TAG, "Received direct message from " + origin + ": " + receivedId);
+
+        origin.setMsgDirect(false);
+        communicationThreadMap.put(receivedId, origin);
+        handler.obtainMessage(HANDLER_TYPE_CONNECTED, new Object[]{receivedId,origin.getDevice()}).sendToTarget();
     }
 
     @Override
-    public void send(byte[] writeBytes){
-        for(BluetoothCommunicationThread communicationThread: communicationThreads){
-            communicationThread.write(writeBytes);
+    public void send(byte[] message){
+        for(BluetoothCommunicationThread communicationThread: communicationThreadMap.values()){
+            communicationThread.write(message);
         }
+    }
+
+    @Override
+    public void send(UUID target, byte[] message){
+        if(target.equals(BLUETOOTH_ID)){
+            send(message);
+        }else {
+            BluetoothCommunicationThread targetThread = communicationThreadMap.get(target);
+            if (targetThread != null)
+                targetThread.write(message);
+        }
+    }
+
+    @Override
+    public UUID getId(){
+        return DEVICE_NETWORK_ID;
     }
 
     /**

@@ -4,17 +4,21 @@ import com.example.virtualcards.model.interfaces.ModelInterface;
 import com.example.virtualcards.model.interfaces.ModelSubscriber;
 
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.UUID;
 
-public class Model implements ModelInterface {
+public class TableModel implements ModelInterface {
     public static final float HEIGHT = 360, WIDTH = HEIGHT * 2.0277777f;
     public static final float MAX_STACK_DISTANCE = 10 * 10;
 
     private ArrayList<GameObject> gameObjects;
+    private Map<GameObject, Byte> reservedObjects;
+
     private ModelSubscriber view;
 
-    private static Model instance;
+    private static TableModel instance;
 
-    Model(){
+    private TableModel(){
         gameObjects = new ArrayList<>();
         gameObjects.add(createFullStack());
     }
@@ -35,9 +39,9 @@ public class Model implements ModelInterface {
         return previous;
     }
 
-    public static Model getModel(){
+    public static TableModel getModel(){
         if(instance == null)
-            instance = new Model();
+            instance = new TableModel();
         return instance;
     }
 
@@ -58,6 +62,14 @@ public class Model implements ModelInterface {
                 }
                 return gameObject;
             }
+        }
+        return null;
+    }
+
+    @Override
+    public GameObject getObject(UUID id){
+        for(GameObject gameObject : gameObjects){
+            if(gameObject.id.equals(id))return gameObject;
         }
         return null;
     }
@@ -83,6 +95,15 @@ public class Model implements ModelInterface {
     }
 
     @Override
+    public void reserveObject(byte player, GameObject gameObject) {
+        reservedObjects.put(gameObject, player);
+    }
+
+    private void freeObject(GameObject gameObject){
+        reservedObjects.remove(gameObject);
+    }
+
+    @Override
     public void moveObject(GameObject object, float x, float y) {
         if(object == null)return;
 
@@ -102,7 +123,6 @@ public class Model implements ModelInterface {
         y = clampToHeight(object, y);
 
         if(object instanceof Card){
-            System.out.println("DROP CARD/STACK (" + x + ", " + y + ") " + object);
             GameObject stackTo = getObject(object, MAX_STACK_DISTANCE, Card.class);
             if(stackTo != null){
                 gameObjects.remove(object);
@@ -111,6 +131,7 @@ public class Model implements ModelInterface {
             }
         }
 
+        freeObject(object);
         notifySubscriber();
     }
 

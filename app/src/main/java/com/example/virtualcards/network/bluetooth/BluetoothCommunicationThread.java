@@ -1,5 +1,6 @@
 package com.example.virtualcards.network.bluetooth;
 
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.util.Log;
@@ -14,14 +15,16 @@ class BluetoothCommunicationThread extends Thread{
 
     private static final String TAG = "BluetoothCommsThread";
 
+    private final BluetoothNetwork network;
     private final BluetoothSocket socket;
     private final InputStream in;
     private final OutputStream out;
     private final Handler handler;
 
     private byte[] buffer;
+    private boolean msgDirect = false;
 
-    public BluetoothCommunicationThread(@NonNull Handler handler, @NonNull BluetoothSocket socket){
+    BluetoothCommunicationThread(@NonNull BluetoothNetwork network, @NonNull BluetoothSocket socket){
         super();
 
         this.socket = socket;
@@ -42,7 +45,12 @@ class BluetoothCommunicationThread extends Thread{
 
         this.in = in;
         this.out = out;
-        this.handler = handler;
+        this.network = network;
+        this.handler = network.getHandler();
+    }
+    BluetoothCommunicationThread(@NonNull BluetoothNetwork network, @NonNull BluetoothSocket socket, boolean msgDirect){
+        this(network, socket);
+        this.msgDirect = msgDirect;
     }
 
     @Override
@@ -51,29 +59,40 @@ class BluetoothCommunicationThread extends Thread{
 
         while(true){
             try{
-                int bytes = in.read(buffer);
-                Log.i(TAG, "Successfully read "+bytes+" bytes.");
 
-                handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_MESSAGE, bytes, -1, buffer).sendToTarget();
+                int bytes = in.read(buffer);
+
+                if(msgDirect){
+                    network.receivedDirect(this, buffer);
+                }else {
+                    handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_MESSAGE, bytes, -1, buffer).sendToTarget();
+                }
             }catch (IOException e){
-                Log.d(TAG, "Input stream disconnected.");
+
                 break;
             }
         }
 
-        handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_DISCONNECTED, socket.getRemoteDevice()).sendToTarget();
+        handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_DISCONNECTED, this).sendToTarget();
     }
 
-    public void write(byte[] bytes){
+    void write(byte[] bytes){
         try{
             out.write(bytes);
-            Log.i(TAG, "Successfully wrote " + bytes.length +" bytes");
         }catch (IOException e){
             Log.e(TAG, "Could not send data.", e);
         }
     }
 
-    public void cancel() {
+    void setMsgDirect(boolean msgDirect){
+        this.msgDirect = msgDirect;
+    }
+
+    BluetoothDevice getDevice(){
+        return socket.getRemoteDevice();
+    }
+
+    void cancel() {
         try{
             socket.close();
         }catch (IOException e){

@@ -8,16 +8,14 @@ import android.opengl.Matrix;
 import com.example.virtualcards.R;
 import com.example.virtualcards.model.Card;
 import com.example.virtualcards.model.GameObject;
-import com.example.virtualcards.model.Model;
+import com.example.virtualcards.model.TableModel;
 import com.example.virtualcards.model.interfaces.ModelSubscriber;
 import com.example.virtualcards.view.card.RenderCard;
 import com.example.virtualcards.view.card.RenderCardCall;
-import com.example.virtualcards.view.geometry.Rectangle;
 import com.example.virtualcards.view.shader.Shader;
 import com.example.virtualcards.view.texture.Texture;
 
 import java.util.ArrayList;
-import java.util.Collections;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -74,7 +72,7 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
         Matrix.setIdentityM(projection, 0);
         GLES20.glUniformMatrix4fv(shader.getUniformLocation("M"), 1, false, projection, 0);
 
-        Matrix.orthoM(projection, 0, 0, Model.WIDTH, 0, Model.HEIGHT, -1, 64);
+        Matrix.orthoM(projection, 0, 0, TableModel.WIDTH, 0, TableModel.HEIGHT, -1, 64);
         GLES20.glUniformMatrix4fv(shader.getUniformLocation("P"), 1, false, projection, 0);
 
         texture.bind(GLES20.GL_TEXTURE0);

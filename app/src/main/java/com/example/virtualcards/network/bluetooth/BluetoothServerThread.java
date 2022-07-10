@@ -22,7 +22,7 @@ class BluetoothServerThread extends Thread {
     private final BluetoothNetwork network;
     private final Handler handler;
 
-    public BluetoothServerThread(@NonNull BluetoothNetwork network) throws IOException {
+    BluetoothServerThread(@NonNull BluetoothNetwork network) throws IOException {
         super();
 
         this.network = network;
@@ -42,20 +42,17 @@ class BluetoothServerThread extends Thread {
             try{
                 socket = serverSocket.accept();
             }catch (IOException e){
-                Log.d(TAG, "Server socket accept failed.");
                 break;
             }
 
             if(socket != null){
-                Log.i(TAG, "Device has successfully connected.");
                 network.connected(socket);
-                handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_CONNECTED, socket.getRemoteDevice()).sendToTarget();
             }
         }
         network.serverClosed();
     }
 
-    public void cancel(){
+    void cancel(){
         try{
             serverSocket.close();
         }catch (IOException e){

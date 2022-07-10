@@ -1,5 +1,6 @@
 package com.example.virtualcards.control;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -16,8 +17,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.virtualcards.R;
-import com.example.virtualcards.model.Model;
+import com.example.virtualcards.model.TableModel;
+import com.example.virtualcards.model.interfaces.ModelInterface;
+import com.example.virtualcards.network.VirtualCardsClient;
+import com.example.virtualcards.network.VirtualCardsServer;
 import com.example.virtualcards.network.bluetooth.BluetoothNetwork;
+import com.example.virtualcards.network.bluetooth.interfaces.MessageReceiver;
 import com.example.virtualcards.view.VirtualCardsView;
 
 import java.io.IOException;
@@ -33,21 +38,11 @@ public class VirtualCardsActivity extends AppCompatActivity{
     }
     private Screen currentScreen;
 
-    private VirtualCardsView virtualCardsView;
+    private VirtualCardsView view;
     private BluetoothNetwork network;
+    private VirtualCardsLobby lobby;
 
-    public static final byte MESSAGE_SET_NAME = 0;
-    public static final byte MESSAGE_ACK_NAME = 1;
-    public static final byte MESSAGE_START_GAME = 2;
-
-    private Map<Byte, UUID> clients = new HashMap<>();
-    private UUID networkId = UUID.randomUUID();
-    public static final byte NAME_HOST = Byte.MIN_VALUE;
-    public static final byte NAME_NONE = Byte.MAX_VALUE;
-    private byte lastName = Byte.MIN_VALUE;
-    private byte networkName = Byte.MAX_VALUE;
-
-    private boolean client = false;
+    private boolean isClient = false;
     private boolean leftLobby = false;
 
     //      DISCOVERED MENU VARIABLES
@@ -65,7 +60,12 @@ public class VirtualCardsActivity extends AppCompatActivity{
     private TextView connectedInfoView;
     private ConstraintLayout serverButtons;
     private ConstraintLayout clientButtons;
-    private Map<BluetoothDevice, View> connectedDevices = new HashMap<>();
+    private Map<UUID, View> connectedDevices = new HashMap<>();
+
+    //      IN GAME VARIABLES
+    private ModelInterface model;
+    private MessageReceiver connectModel;
+
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //      APP LIFECYCLE
@@ -80,11 +80,10 @@ public class VirtualCardsActivity extends AppCompatActivity{
 
         network = BluetoothNetwork.getNetwork(this);
         network.activateBluetooth();
-        network.registerDiscoveredReceiver(this::discoveredDevice);
-        network.registerConnectedReceiver(this::connectedDevice);
-        network.registerDisconnectedReceiver(this::disconnectedDevice);
-        network.registerConnectionFailedReceiver(this::connectionFailed);
         network.registerMessageReceiver(this::receive);
+        network.registerEventReceiver(this::networkEventOccurred);
+
+        model = TableModel.getModel();
     }
 
     @Override
@@ -92,7 +91,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
         super.onPause();
 
         if(currentScreen == Screen.GAME)
-            virtualCardsView.onPause();
+            view.onPause();
     }
 
     @Override
@@ -100,7 +99,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
         super.onResume();
 
         if(currentScreen == Screen.GAME)
-            virtualCardsView.onResume();
+            view.onResume();
 
         hideSystemUI();
     }
@@ -142,13 +141,16 @@ public class VirtualCardsActivity extends AppCompatActivity{
     private void setContentViewLobby(){
         setContentView(R.layout.lobby_menu);
 
+        lobby = new VirtualCardsLobby(this, network, isClient);
+        lobby.registerEventReceiver(this::LobbyEventOccurred);
+
         connectedDeviceView = findViewById(R.id.connectedDevices);
         connectedInfoView = findViewById(R.id.connectedInfoView);
 
         serverButtons = findViewById(R.id.serverButtons);
         clientButtons = findViewById(R.id.clientButtons);
 
-        if(client){
+        if(isClient){
             clientButtons.setVisibility(View.VISIBLE);
             serverButtons.setVisibility(View.GONE);
         }else{
@@ -161,15 +163,24 @@ public class VirtualCardsActivity extends AppCompatActivity{
 
     private void setContentViewGame(){
         Control.updateScreenModelRatio(this);
-        Model model = Model.getModel();
-        virtualCardsView = new VirtualCardsView(this, Control.getControl(model));
-        model.subscribeView(virtualCardsView.getSubscriber());
+        ModelInterface remoteModel;
+        if(isClient){
+            VirtualCardsClient clientModel = new VirtualCardsClient(network, (byte)0);
+            this.connectModel = clientModel;
+            remoteModel = clientModel;
+        }else{
+            VirtualCardsServer serverModel = new VirtualCardsServer(network);
+            this.connectModel = serverModel;
+            remoteModel = serverModel;
+        }
+        view = new VirtualCardsView(this, Control.getControl(remoteModel));
+        remoteModel.subscribeView(view.getSubscriber());
 
-        float x = (Model.WIDTH) * 0.5f;
-        float y = (Model.HEIGHT) * 0.5f;
+        float x = (TableModel.WIDTH) * 0.5f;
+        float y = (TableModel.HEIGHT) * 0.5f;
         model.moveObject(model.getObject(x,  y), x, y);
 
-        setContentView(virtualCardsView);
+        setContentView(view);
 
         currentScreen = Screen.GAME;
     }
@@ -190,26 +201,24 @@ public class VirtualCardsActivity extends AppCompatActivity{
         decorView.setSystemUiVisibility(uiOptions);
     }
 
-    private void addDeviceToDiscoveryView(BluetoothDevice device){
-        String deviceName = device.getName();
-        String deviceMac = device.getAddress();
+    private String getDeviceName(BluetoothDevice device){
+        @SuppressLint("MissingPermission") String name = device.getName();
+        name = (name != null) ? name : device.getAddress();
+        return name;
+    }
 
+    private void addDeviceToDiscoveryView(BluetoothDevice device){
         Button button = new Button(this);
 
-        String name;
-        if(deviceName != null){
-            name = deviceName;
-        }else{
-            name = deviceMac;
-        }
+        String name = getDeviceName(device);
         button.setText(name);
 
         button.setOnClickListener(view -> {
             try {
-                client = true;
+                isClient = true;
 
                 setContentViewConnecting();
-                connectingInfo.setText("connecting to " + name);
+                connectingInfo.setText(getString(R.string.connecting_info, name));
                 connectingProgressBar.setVisibility(View.VISIBLE);
 
                 network.openClient(device);
@@ -222,22 +231,20 @@ public class VirtualCardsActivity extends AppCompatActivity{
         discoverDeviceView.addView(button);
     }
 
-    private void addDeviceToConnectedView(BluetoothDevice device){
-        String deviceName = device.getName();
-        String deviceMac = device.getAddress();
+    private void addDeviceToConnectedView(String name, UUID id){
 
         Button button = new Button(this);
-
-        if(deviceName != null){
-            button.setText(deviceName);
-        }else{
-            button.setText(deviceMac);
-        }
+        button.setText(name);
 
         button.setActivated(false);
 
         connectedDeviceView.addView(button);
-        connectedDevices.put(device, button);
+        connectedDevices.put(id, button);
+
+        if(!connectedDevice){
+            connectedInfoView.setVisibility(View.INVISIBLE);
+            connectedDevice = true;
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -250,7 +257,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
             super.onBackPressed();
 
         else if(currentScreen == Screen.MENU_LOBBY){
-            if(client)
+            if(isClient)
                 leave(null);
             else
                 close(null);
@@ -281,8 +288,8 @@ public class VirtualCardsActivity extends AppCompatActivity{
 
     public void host(View view){
         try {
-            network.openServer();
             setContentViewLobby();
+            network.openServer();
         } catch (IOException e) {
             Toast.makeText(this, "Server could not be created.", Toast.LENGTH_LONG).show();
         }
@@ -300,7 +307,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
 
     public void cancel(View view){
         network.closeConnections();
-        client = false;
+        isClient = false;
 
         join(null);
     }
@@ -321,7 +328,6 @@ public class VirtualCardsActivity extends AppCompatActivity{
     }
 
     public void start(View view){
-        sendGameStarted();
         setContentViewGame();
     }
 
@@ -337,67 +343,21 @@ public class VirtualCardsActivity extends AppCompatActivity{
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //      NETWORK MESSAGING
+    //      LOBBY CALLBACKS
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    private byte getNextName(){
-        if(lastName == NAME_NONE)return lastName;
-        return ++lastName;
-    }
-
-    private void sendName(){
-        network.send(new byte[]{MESSAGE_SET_NAME, getNextName()});
-    }
-
-    private void acknowledgeName(byte name, UUID networkId){
-        byte[] message = new byte[18];
-        ByteBuffer messageBuffer = ByteBuffer.wrap(message);
-        messageBuffer.put(MESSAGE_ACK_NAME);
-        messageBuffer.put(name);
-        messageBuffer.putLong(networkId.getMostSignificantBits());
-        messageBuffer.putLong(networkId.getLeastSignificantBits());
-        network.send(message);
-    }
-
-    private void sendGameStarted(){
-        byte[] message = new byte[1];
-        message[0] = MESSAGE_START_GAME;
-        network.send(message);
-    }
-
-    private void receive(ByteBuffer bytes){
-        switch(bytes.get()){
-            case MESSAGE_SET_NAME:
-                acknowledgeName(bytes.get(), networkId);
+    public void LobbyEventOccurred(int event, UUID deviceId, String deviceName){
+        switch(event){
+            case VirtualCardsLobby.EVENT_JOINED:
+                addDeviceToConnectedView(deviceName, deviceId);
                 break;
-            case MESSAGE_ACK_NAME:
-                if (client){
-                    if(networkName == NAME_NONE){
-                        byte id = bytes.get();
-                        UUID toId = new UUID(bytes.getLong(), bytes.getLong());
-                        if(toId.equals(networkId)){
-                            networkName = id;
-                            Log.i("DeviceNetworkNamed", "Network name was set to " + id);
-                        }
-                        Log.i("NetworkInControl", "ack was " + id + " for " + toId + ", own is " + networkId);
-                    }
-                }
-                else {
-                    Byte name = bytes.get();
-                    if(!clients.containsKey(name)) {
-                        UUID id = new UUID(bytes.getLong(), bytes.getLong());
-                        clients.put(name, id);
-                        acknowledgeName(name, id);
-                    }
-                }
-                break;
-            case MESSAGE_START_GAME:
-                setContentViewGame();
+            case VirtualCardsLobby.EVENT_LEFT:
+                connectedDeviceView.removeView(connectedDevices.get(deviceId));
         }
     }
 
@@ -405,7 +365,36 @@ public class VirtualCardsActivity extends AppCompatActivity{
     //      NETWORK CALLBACKS
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    public void discoveredDevice(BluetoothDevice device) {
+
+    private void receive(ByteBuffer buffer) {
+        if(lobby != null)
+            lobby.receive(buffer);
+    }
+
+    public void networkEventOccurred(int event, UUID deviceId, BluetoothDevice device){
+        switch(event){
+            case BluetoothNetwork.EVENT_CODE_DISCOVERED:
+                discoveredDevice(device);
+                break;
+
+            case BluetoothNetwork.EVENT_CODE_CONNECTED:
+                if(!isClient)
+                    lobby.receive(event, deviceId, device);
+                connectedDevice(device);
+                break;
+
+            case BluetoothNetwork.EVENT_CODE_DISCONNECTED:
+                if(!isClient)
+                    lobby.receive(event, deviceId, device);
+                disconnectedDevice(device);
+                break;
+
+            case BluetoothNetwork.EVENT_CODE_CONNECTION_FAILED:
+                connectionFailed(device);
+        }
+    }
+
+    private void discoveredDevice(BluetoothDevice device) {
         if(!discoveredDevice){
             discoveryInfoView.setVisibility(View.INVISIBLE);
         }
@@ -414,39 +403,33 @@ public class VirtualCardsActivity extends AppCompatActivity{
         discoveredDevice = true;
     }
 
-    public void connectedDevice(BluetoothDevice device) {
-        if(client){
+    private void connectedDevice(BluetoothDevice device) {
+        String deviceName = getDeviceName(device);
+
+        if(isClient){
             setContentViewLobby();
-        }else{
-            Log.i("ServerSendName", "New device connected suggesting network name to device");
-            sendName();
         }
 
-        if(!connectedDevice){
-            connectedInfoView.setVisibility(View.INVISIBLE);
-        }
-
-        addDeviceToConnectedView(device);
+         //addDeviceToConnectedView(deviceName, device.getAddress());
     }
 
-    public void disconnectedDevice(BluetoothDevice device){
-        if(client) {
+    private void disconnectedDevice(BluetoothDevice device){
+        if(isClient) {
             if (!(currentScreen == Screen.GAME)) {
                 if (!leftLobby)
                     Toast.makeText(this, R.string.info_lobby_closed, Toast.LENGTH_LONG).show();
                 else
                     leftLobby = false;
                 connectedDevice = false;
-                client = false;
+                isClient = false;
                 setContentViewMain();
             }
         }else{
-            connectedDeviceView.removeView(connectedDevices.get(device));
+            //connectedDeviceView.removeView(connectedDevices.get(device.getAddress()));
         }
     }
 
-    //TODO fix in network: client connection seems to be automatically denied when not connecting for first time
-    public void connectionFailed(BluetoothDevice device){
+    private void connectionFailed(BluetoothDevice device){
         Log.i("ConnectionFailed", "Connection to device (" + device.getAddress() +") failed.");
         if(currentScreen == Screen.INFO_CONNECTING) {
             connectingInfo.setText(R.string.info_wrong_server);
