@@ -325,7 +325,6 @@ public class BluetoothNetwork implements MessageTransmitter {
     }
 
     void received(ByteBuffer receivedBytes){
-        Log.d("BTMessageReceived", "Message received.");
         if (messageReceiver != null) messageReceiver.receive(receivedBytes);
     }
 
@@ -333,8 +332,6 @@ public class BluetoothNetwork implements MessageTransmitter {
 
         ByteBuffer buffer = ByteBuffer.wrap(receivedBytes);
         UUID receivedId = new UUID(buffer.getLong(), buffer.getLong());
-
-        Log.d(LOG_TAG, "Received direct message from " + origin + ": " + receivedId);
 
         origin.setMsgDirect(false);
         communicationThreadMap.put(receivedId, origin);

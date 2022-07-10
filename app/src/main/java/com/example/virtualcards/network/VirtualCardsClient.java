@@ -50,7 +50,7 @@ public class VirtualCardsClient implements MessageReceiver, ModelInterface {
 
     @Override
     public void subscribeView(ModelSubscriber view) {
-
+        model.subscribeView(view);
     }
 
     @Override

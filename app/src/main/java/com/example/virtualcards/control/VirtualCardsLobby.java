@@ -1,7 +1,5 @@
 package com.example.virtualcards.control;
 
-import android.annotation.SuppressLint;
-import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.provider.Settings;
@@ -17,28 +15,28 @@ import com.example.virtualcards.util.ByteIdPool;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 //TODO remove assertions after validation
+//TODO free byte ids of disconnected devices
+//TODO do something when there is no more space in the lobby and someone is trying to connect
 public class VirtualCardsLobby implements MessageReceiver, BluetoothNetworkEventReceiver {
 
     public static final String TAG = "VirtualCardsLobby";
 
-    private static final byte MESSAGE_SET_NAME = 0; //Replaced by MESSAGE_LOBBY_INFO
+    private static final byte MESSAGE_LOBBY_INFO = 0;
     private static final byte MESSAGE_JOINED = 1;
     private static final byte MESSAGE_LEFT = 2;
     private static final byte MESSAGE_START_GAME = 3;
-    private static final byte MESSAGE_LOBBY_INFO = 4;
 
     private static final byte PLAYER_ID_HOST = Byte.MIN_VALUE;
     private static final byte PLAYER_ID_NONE = Byte.MAX_VALUE;
 
     public static final int EVENT_JOINED = 0,
-        EVENT_LEFT = 1;
+            EVENT_LEFT = 1,
+            EVENT_GAME_STARTED = 2;
 
     public interface LobbyEventReceiver{
         void receive(int eventCode, UUID targetId, String targetName);
@@ -61,7 +59,7 @@ public class VirtualCardsLobby implements MessageReceiver, BluetoothNetworkEvent
             idPool = new ByteIdPool();
             idPool.reserve(PLAYER_ID_NONE);
             idPool.reserve(PLAYER_ID_HOST);
-            playerId = Byte.MIN_VALUE;
+            playerId = PLAYER_ID_HOST;
         }else{
             idPool = null;
             playerId = PLAYER_ID_NONE;
@@ -215,6 +213,18 @@ public class VirtualCardsLobby implements MessageReceiver, BluetoothNetworkEvent
         }
     }
 
+    private void sendStartGame(){
+        assert !isClient : "MESSAGE_START_GAME should not be send by client";
+
+        transmitter.send(new byte[]{MESSAGE_START_GAME});
+    }
+
+    private void receivedStartGame(ByteBuffer receivedBytes){
+        assert isClient : "MESSAGE_START_GAME should not be received by server";
+
+        receiveEvent(EVENT_GAME_STARTED, null, String.valueOf(playerId));
+    }
+
     @Override
     public void receive(ByteBuffer receivedBytes) {
         byte messageType = receivedBytes.get();
@@ -229,6 +239,8 @@ public class VirtualCardsLobby implements MessageReceiver, BluetoothNetworkEvent
             case MESSAGE_LEFT:
                 receiveLeft(receivedBytes);
                 break;
+            case MESSAGE_START_GAME:
+                receivedStartGame(receivedBytes);
         }
     }
 
@@ -249,5 +261,12 @@ public class VirtualCardsLobby implements MessageReceiver, BluetoothNetworkEvent
                     clients.remove(receiverId);
                 }
         }
+    }
+
+    public void startGame(){
+        if(isClient)throw new IllegalStateException("Cannot start game from a client lobby.");
+
+        sendStartGame();
+        receiveEvent(EVENT_GAME_STARTED, null, String.valueOf(playerId));
     }
 }

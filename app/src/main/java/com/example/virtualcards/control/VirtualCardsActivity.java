@@ -60,7 +60,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
     private TextView connectedInfoView;
     private ConstraintLayout serverButtons;
     private ConstraintLayout clientButtons;
-    private Map<UUID, View> connectedDevices = new HashMap<>();
+    private final Map<UUID, View> connectedDevices = new HashMap<>();
 
     //      IN GAME VARIABLES
     private ModelInterface model;
@@ -161,11 +161,11 @@ public class VirtualCardsActivity extends AppCompatActivity{
         currentScreen = Screen.MENU_LOBBY;
     }
 
-    private void setContentViewGame(){
+    private void setContentViewGame(byte playerId){
         Control.updateScreenModelRatio(this);
         ModelInterface remoteModel;
         if(isClient){
-            VirtualCardsClient clientModel = new VirtualCardsClient(network, (byte)0);
+            VirtualCardsClient clientModel = new VirtualCardsClient(network, playerId);
             this.connectModel = clientModel;
             remoteModel = clientModel;
         }else{
@@ -276,7 +276,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
 
 
     public void demo(View view){
-        setContentViewGame();
+        setContentViewGame((byte)0);
     }
 
     public void join(View view){
@@ -328,7 +328,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
     }
 
     public void start(View view){
-        setContentViewGame();
+        lobby.startGame();
     }
 
     public void leave(View view){
@@ -356,8 +356,13 @@ public class VirtualCardsActivity extends AppCompatActivity{
             case VirtualCardsLobby.EVENT_JOINED:
                 addDeviceToConnectedView(deviceName, deviceId);
                 break;
+
             case VirtualCardsLobby.EVENT_LEFT:
                 connectedDeviceView.removeView(connectedDevices.get(deviceId));
+                break;
+
+            case VirtualCardsLobby.EVENT_GAME_STARTED:
+                setContentViewGame(Byte.parseByte(deviceName));
         }
     }
 
@@ -367,8 +372,14 @@ public class VirtualCardsActivity extends AppCompatActivity{
 
 
     private void receive(ByteBuffer buffer) {
-        if(lobby != null)
+        Log.i("BLUETOOTH","Message received!");
+        if (currentScreen == Screen.GAME) {
+            Log.i("BLUETOOTH", "Massage passed to game.");
+            connectModel.receive(buffer);
+        } else if (lobby != null) {
+            Log.i("BLUETOOTH", "Message passed to lobby.");
             lobby.receive(buffer);
+        }
     }
 
     public void networkEventOccurred(int event, UUID deviceId, BluetoothDevice device){
@@ -380,13 +391,14 @@ public class VirtualCardsActivity extends AppCompatActivity{
             case BluetoothNetwork.EVENT_CODE_CONNECTED:
                 if(!isClient)
                     lobby.receive(event, deviceId, device);
-                connectedDevice(device);
+                else
+                    setContentViewLobby();
                 break;
 
             case BluetoothNetwork.EVENT_CODE_DISCONNECTED:
                 if(!isClient)
                     lobby.receive(event, deviceId, device);
-                disconnectedDevice(device);
+                disconnectedDevice();
                 break;
 
             case BluetoothNetwork.EVENT_CODE_CONNECTION_FAILED:
@@ -403,17 +415,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
         discoveredDevice = true;
     }
 
-    private void connectedDevice(BluetoothDevice device) {
-        String deviceName = getDeviceName(device);
-
-        if(isClient){
-            setContentViewLobby();
-        }
-
-         //addDeviceToConnectedView(deviceName, device.getAddress());
-    }
-
-    private void disconnectedDevice(BluetoothDevice device){
+    private void disconnectedDevice(){
         if(isClient) {
             if (!(currentScreen == Screen.GAME)) {
                 if (!leftLobby)
@@ -424,8 +426,6 @@ public class VirtualCardsActivity extends AppCompatActivity{
                 isClient = false;
                 setContentViewMain();
             }
-        }else{
-            //connectedDeviceView.removeView(connectedDevices.get(device.getAddress()));
         }
     }
 
