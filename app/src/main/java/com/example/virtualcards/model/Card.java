@@ -44,7 +44,7 @@ public class Card extends GameObject {
     protected final Value value;
     protected boolean faceUp;
 
-    Card(float x, float y, Suit suit, Value value) {
+    public Card(float x, float y, Suit suit, Value value) {
         super(x, y, WIDTH, HEIGHT);
 
         this.suit = suit;

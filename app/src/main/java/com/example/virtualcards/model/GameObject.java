@@ -9,7 +9,7 @@ public class GameObject {
     protected float x, y;
     protected float width, height;
 
-    GameObject(float x, float y, float width, float height){
+    public GameObject(float x, float y, float width, float height){
         this.x = x;
         this.y = y;
         this.width = width;

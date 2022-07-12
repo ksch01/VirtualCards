@@ -162,7 +162,9 @@ public class TableModel implements ModelInterface {
         ArrayList<GameObject> copy = new ArrayList<>(gameObjects.size());
         for(GameObject object : gameObjects)
             copy.add(object);
-        view.update(copy);
+        if (view != null) {
+            view.update(copy);
+        }
     }
 
     private float clampToWidth(GameObject object, float x){
