@@ -1,5 +1,7 @@
 package com.example.virtualcards.network;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.example.virtualcards.model.GameObject;
@@ -17,7 +19,7 @@ public class VirtualCardsServer implements MessageReceiver, ModelInterface {
 
     private static final byte ID = Byte.MIN_VALUE;
 
-    private static final long MAX_TICK = 64;
+    private static final long MAX_TICK = 32;
     private long last = 0;
 
     private final MessageTransmitter transmitter;
@@ -40,8 +42,9 @@ public class VirtualCardsServer implements MessageReceiver, ModelInterface {
         switch(payload.operation){
             case MOVE:
                 moveObject(model.getObject((UUID) payload.data.get(0)), (float)payload.data.get(1), (float)payload.data.get(2));
+                break;
             case RESERVE:
-
+                reserveObject(model.getObject((UUID) payload.data.get(0)), (byte)payload.data.get(1));
         }
     }
 
@@ -82,13 +85,11 @@ public class VirtualCardsServer implements MessageReceiver, ModelInterface {
         model.subscribeView(view);
     }
 
-    private void getObject(byte operator, UUID objectId){
-
-    }
-
     @Override
     public GameObject getObject(float x, float y) {
-        return model.getObject(x, y);
+        GameObject gameObject = model.getObject(x, y);
+        reserveObject(gameObject, ID);
+        return gameObject;
     }
 
     @Override
@@ -98,7 +99,7 @@ public class VirtualCardsServer implements MessageReceiver, ModelInterface {
 
     @Override
     public void reserveObject(GameObject object, byte player) {
-        if(object != null)return;
+        if(object == null)return;
         transmitter.send(NetworkData.serialize(NetworkData.Operation.RESERVE, object.id, player));
         model.reserveObject(object, player);
     }

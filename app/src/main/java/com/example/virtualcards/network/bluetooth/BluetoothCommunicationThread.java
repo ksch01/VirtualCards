@@ -125,7 +125,6 @@ class BluetoothCommunicationThread extends Thread{
     }
 
     private byte[] withHeader(byte[] bytes){
-        Log.i("BLUETOOTH_COMMS", "Add header to message " + bytes.length + " (4)");
         int length = bytes.length;
         byte[] message = new byte[length + 4];
         message[0] = (byte) (length & 0xFF);
@@ -140,7 +139,6 @@ class BluetoothCommunicationThread extends Thread{
 
     private int readHeader(byte[] bytes, int offset){
         int header = ((int)bytes[offset + 3] << 24) | ((int)bytes[offset + 2] & 0xFF) << 16 | ((int)bytes[offset + 1] & 0xFF) << 8 | ((int)bytes[offset] & 0xFF);
-        Log.i("BLUETOOTH_COMMS", "Read header from message " + header + " (4)");
         return header;
     }
 

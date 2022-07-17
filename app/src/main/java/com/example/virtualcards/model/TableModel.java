@@ -117,7 +117,8 @@ public class TableModel implements ModelInterface {
 
     @Override
     public void reserveObject(GameObject gameObject, byte player) {
-        reservedObjects.put(gameObject, player);
+        if(!reservedObjects.containsKey(gameObject))
+            reservedObjects.put(gameObject, player);
     }
 
     private void freeObject(GameObject gameObject){

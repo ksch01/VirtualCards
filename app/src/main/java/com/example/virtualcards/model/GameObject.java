@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
 
+//TODO: create interface for usage outside of model
 //TODO: outsource serialization
 public abstract class GameObject{
 
@@ -21,7 +22,7 @@ public abstract class GameObject{
         this.width = width;
         this.height = height;
     }
-    public GameObject(float x, float y, float width, float height){
+    GameObject(float x, float y, float width, float height){
         id = UUID.randomUUID();
         setPos(x,y);
         this.width = width;

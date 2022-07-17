@@ -39,16 +39,6 @@ public class ModelTests {
     }*/
 
     @Test
-    public void gameObjectConstructorTest() {
-        firstExampleGameObject = new GameObject(0, 0, 10, 10);
-
-        assertEquals(firstExampleGameObject.getX(), 0,0);
-        assertEquals(firstExampleGameObject.getY(), 0,0);
-        assertEquals(firstExampleGameObject.getWidth(), 10,0);
-        assertEquals(firstExampleGameObject.getHeight(), 10,0);
-    }
-
-    @Test
     public void modelInitializeTest() {
         firstExampleModel = TableModel.getModel();
         float centerX = (TableModel.WIDTH - Card.WIDTH) * 0.5f, centerY = (TableModel.HEIGHT - Card.HEIGHT) * 0.5f;

@@ -4,6 +4,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.example.virtualcards.control.Control;
 import com.example.virtualcards.model.GameObject;
 import com.example.virtualcards.model.TableModel;
 import com.example.virtualcards.model.interfaces.ModelInterface;
@@ -17,15 +18,21 @@ import java.util.UUID;
 
 public class VirtualCardsClient implements MessageReceiver, ModelInterface {
 
+    private static final long MAX_TICK = 64;
     private final byte id;
+
+    private final Control control;
 
     private final MessageTransmitter transmitter;
     private final TableModel model;
+
+    private long last;
 
     public VirtualCardsClient(@NonNull MessageTransmitter transmitter, byte playerId){
         this.transmitter = transmitter;
         this.model = TableModel.getModel();
         id = playerId;
+        control = Control.getControl(this);
     }
 
     @Override
@@ -34,10 +41,15 @@ public class VirtualCardsClient implements MessageReceiver, ModelInterface {
 
         switch(payload.operation){
             case RESERVE:
-                model.reserveObject(model.getObject((UUID)payload.data.get(0)),(byte)payload.data.get(1));
+                Log.i("VCC_COMMS", "Received reserve for object " + payload.data.get(0) + " by player " + payload.data.get(1));
+                byte playerId = (byte)payload.data.get(1);
+                if(id == playerId){
+                    control.obtainObjectAsynchronously(model.getObject((UUID)payload.data.get(0)));
+                }else {
+                    model.reserveObject(model.getObject((UUID) payload.data.get(0)), (byte) payload.data.get(1));
+                }
+                break;
             case MOVE:
-                GameObject gameObject = model.getObject((UUID) payload.data.get(0));
-                Log.i("VC_CLIENT", "Move object " + gameObject + "(" + payload.data.get(0) + ")");
                 model.moveObject(model.getObject((UUID) payload.data.get(0)), (float)payload.data.get(1), (float)payload.data.get(2));
                 break;
             case HIT:
@@ -52,10 +64,26 @@ public class VirtualCardsClient implements MessageReceiver, ModelInterface {
                 ;
                 break;
             case SYNC:
-                UUID stackId = ((List<GameObject>)payload.data.get(0)).get(0).id;
-                Log.i("VC_CLIENT", "Sync received stack: " + stackId);
                 model.setState((List<GameObject>) payload.data.get(0));
         }
+    }
+
+    private boolean isSendValid(NetworkData.Operation operation){
+        if(operation.isDispensable){
+            if(last == 0){
+                last = System.currentTimeMillis();
+                return true;
+            }else{
+                long now = System.currentTimeMillis();
+                if(now - last > MAX_TICK){
+                    last = now;
+                    return true;
+                }else{
+                    return false;
+                }
+            }
+        }
+        return false;
     }
 
     @Override
@@ -94,7 +122,8 @@ public class VirtualCardsClient implements MessageReceiver, ModelInterface {
 
     @Override
     public void moveObject(GameObject object, float x, float y) {
-
+        if(object != null && isSendValid(NetworkData.Operation.MOVE))
+            transmitter.send(NetworkData.serialize(NetworkData.Operation.MOVE, object.id, x, y));
     }
 
     @Override
