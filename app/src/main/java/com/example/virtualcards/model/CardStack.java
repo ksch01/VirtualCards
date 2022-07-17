@@ -1,16 +1,25 @@
 package com.example.virtualcards.model;
 
+import androidx.annotation.NonNull;
+
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.UUID;
 
 public class CardStack extends Card {
 
-    static final int ACTION_DRAW = 1;
+    public static final byte CARD_STACK_IDENTIFIER = 2;
 
-    private ArrayList<Card> cards = new ArrayList<>();
+    private final ArrayList<Card> cards = new ArrayList<>();
 
-    CardStack(float x, float y, Card.Suit suit, Card.Value value) {
-        super(x, y, suit, value);
+    CardStack(float x, float y) {
+        super(x, y, null, null);
+    }
+    public CardStack(UUID id, float x, float y, @NonNull Collection<Card> cards){
+        super(id, x, y,null,null, false);
+        this.cards.addAll(cards);
     }
 
     protected static CardStack stackCards(Card card, Card to){
@@ -18,7 +27,7 @@ public class CardStack extends Card {
         if(card instanceof CardStack){
             stack = (CardStack) card;
         }else {
-            stack = new CardStack(to.x, to.y, null, null);
+            stack = new CardStack(to.x, to.y);
             stack.add(card);
         }
         stack.add(to);
@@ -54,11 +63,31 @@ public class CardStack extends Card {
         return card;
     }
 
+    protected boolean isEmpty(){
+        return cards.isEmpty();
+    }
+
     @Override
     protected void flip(){
         for (Card card : cards) {
             card.flip();
         }
         Collections.reverse(cards);
+    }
+
+    @Override
+    protected byte[] serialize(){
+        ByteBuffer cardStackBytes = ByteBuffer.wrap(new byte[cards.size() * 19]);
+        for(Card card : cards){
+            cardStackBytes.putLong(card.id.getMostSignificantBits());
+            cardStackBytes.putLong(card.id.getLeastSignificantBits());
+            cardStackBytes.put(card.serialize());
+        }
+        return cardStackBytes.array();
+    }
+
+    @Override
+    protected byte getIdentifier() {
+        return CARD_STACK_IDENTIFIER;
     }
 }

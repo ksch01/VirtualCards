@@ -58,8 +58,6 @@ public class VirtualCardsActivity extends AppCompatActivity{
     private boolean connectedDevice = false;
     private LinearLayout connectedDeviceView;
     private TextView connectedInfoView;
-    private ConstraintLayout serverButtons;
-    private ConstraintLayout clientButtons;
     private final Map<UUID, View> connectedDevices = new HashMap<>();
 
     //      IN GAME VARIABLES
@@ -83,7 +81,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
         network.registerMessageReceiver(this::receive);
         network.registerEventReceiver(this::networkEventOccurred);
 
-        model = TableModel.getModel();
+        Control.updateScreenModelRatio(this);
     }
 
     @Override
@@ -147,8 +145,8 @@ public class VirtualCardsActivity extends AppCompatActivity{
         connectedDeviceView = findViewById(R.id.connectedDevices);
         connectedInfoView = findViewById(R.id.connectedInfoView);
 
-        serverButtons = findViewById(R.id.serverButtons);
-        clientButtons = findViewById(R.id.clientButtons);
+        ConstraintLayout serverButtons = findViewById(R.id.serverButtons);
+        ConstraintLayout clientButtons = findViewById(R.id.clientButtons);
 
         if(isClient){
             clientButtons.setVisibility(View.VISIBLE);
@@ -162,23 +160,22 @@ public class VirtualCardsActivity extends AppCompatActivity{
     }
 
     private void setContentViewGame(byte playerId){
-        Control.updateScreenModelRatio(this);
-        ModelInterface remoteModel;
+
         if(isClient){
             VirtualCardsClient clientModel = new VirtualCardsClient(network, playerId);
             this.connectModel = clientModel;
-            remoteModel = clientModel;
+            model = clientModel;
         }else{
             VirtualCardsServer serverModel = new VirtualCardsServer(network);
             this.connectModel = serverModel;
-            remoteModel = serverModel;
+            model = serverModel;
         }
-        view = new VirtualCardsView(this, Control.getControl(remoteModel));
-        remoteModel.subscribeView(view.getSubscriber());
 
-        float x = (TableModel.WIDTH) * 0.5f;
-        float y = (TableModel.HEIGHT) * 0.5f;
-        model.moveObject(model.getObject(x,  y), x, y);
+        view = new VirtualCardsView(this, Control.getControl(model));
+        model.subscribeView(view.getSubscriber());
+
+        if(!isClient){
+        }
 
         setContentView(view);
 
@@ -196,8 +193,8 @@ public class VirtualCardsActivity extends AppCompatActivity{
         View decorView = getWindow().getDecorView();
         int uiOptions =
                 View.SYSTEM_UI_FLAG_FULLSCREEN|
-                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|
-                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
         decorView.setSystemUiVisibility(uiOptions);
     }
 
@@ -246,6 +243,8 @@ public class VirtualCardsActivity extends AppCompatActivity{
             connectedDevice = true;
         }
     }
+
+
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //      SYSTEM UI ON CLICKS
@@ -324,6 +323,8 @@ public class VirtualCardsActivity extends AppCompatActivity{
         network.closeServer();
         network.closeConnections();
         connectedDevice = false;
+        lobby.registerEventReceiver(null);
+        lobby = null;
         setContentViewMain();
     }
 
@@ -372,13 +373,15 @@ public class VirtualCardsActivity extends AppCompatActivity{
 
 
     private void receive(ByteBuffer buffer) {
-        Log.i("BLUETOOTH","Message received!");
         if (currentScreen == Screen.GAME) {
-            Log.i("BLUETOOTH", "Massage passed to game.");
+
             connectModel.receive(buffer);
         } else if (lobby != null) {
-            Log.i("BLUETOOTH", "Message passed to lobby.");
+
             lobby.receive(buffer);
+        } else{
+
+            Log.e("BLUETOOTH", "Message could not be passed to service.");
         }
     }
 
@@ -424,6 +427,8 @@ public class VirtualCardsActivity extends AppCompatActivity{
                     leftLobby = false;
                 connectedDevice = false;
                 isClient = false;
+                lobby.registerEventReceiver(null);
+                lobby = null;
                 setContentViewMain();
             }
         }

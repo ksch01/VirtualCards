@@ -16,6 +16,7 @@ import com.example.virtualcards.view.shader.Shader;
 import com.example.virtualcards.view.texture.Texture;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -51,7 +52,7 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
     private RenderCard[] renderCards = new RenderCard[52];
     private ArrayList<RenderCardCall> renderCardCalls = new ArrayList<>();
 
-    private ArrayList<GameObject> updateCall = new ArrayList<>();
+    private List<GameObject> updateCall = new ArrayList<>();
 
     public VirtualCardsRenderer(Context context, VirtualCardsView view){
         this.context = context;
@@ -99,14 +100,14 @@ public class VirtualCardsRenderer implements GLSurfaceView.Renderer, ModelSubscr
     }
 
     @Override
-    public void update(ArrayList<GameObject> gameObjects) {
+    public void update(List<GameObject> gameObjects) {
 
         updateCall = gameObjects;
 
         view.requestRender();
     }
 
-    private void call(ArrayList<GameObject> gameObjects){
+    private void call(List<GameObject> gameObjects){
         if(gameObjects == null)return;
 
         renderCardCalls.clear();

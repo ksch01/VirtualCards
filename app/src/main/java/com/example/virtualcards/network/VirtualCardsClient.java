@@ -1,5 +1,7 @@
 package com.example.virtualcards.network;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.example.virtualcards.model.GameObject;
@@ -10,14 +12,15 @@ import com.example.virtualcards.network.bluetooth.interfaces.MessageReceiver;
 import com.example.virtualcards.network.bluetooth.interfaces.MessageTransmitter;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.UUID;
 
 public class VirtualCardsClient implements MessageReceiver, ModelInterface {
 
-    private byte id;
+    private final byte id;
 
-    private MessageTransmitter transmitter;
-    private TableModel model;
+    private final MessageTransmitter transmitter;
+    private final TableModel model;
 
     public VirtualCardsClient(@NonNull MessageTransmitter transmitter, byte playerId){
         this.transmitter = transmitter;
@@ -27,25 +30,42 @@ public class VirtualCardsClient implements MessageReceiver, ModelInterface {
 
     @Override
     public void receive(ByteBuffer receivedBytes) {
-        NetworkData.Payload payload = NetworkData.deserialize(receivedBytes);
-        assert !receivedBytes.hasRemaining() : "received message buffer had remaining although every info that should have been send was read";
+        Payload payload = NetworkData.deserialize(receivedBytes);
 
         switch(payload.operation){
-            case GET:
-                model.reserveObject(payload.player, model.getObject(payload.getObject(0)));
+            case RESERVE:
+                model.reserveObject(model.getObject((UUID)payload.data.get(0)),(byte)payload.data.get(1));
             case MOVE:
-                model.moveObject(model.getObject(payload.getObject(0)), payload.x, payload.y);
+                GameObject gameObject = model.getObject((UUID) payload.data.get(0));
+                Log.i("VC_CLIENT", "Move object " + gameObject + "(" + payload.data.get(0) + ")");
+                model.moveObject(model.getObject((UUID) payload.data.get(0)), (float)payload.data.get(1), (float)payload.data.get(2));
                 break;
             case HIT:
-                model.hitObject(model.getObject(payload.getObject(0)));
+                model.hitObject(model.getObject((UUID) payload.data.get(0)));
                 break;
             case DROP:
-                model.dropObject(model.getObject(payload.getObject(0)), payload.x, payload.y);
+                model.dropObject(model.getObject((UUID) payload.data.get(0)), (float)payload.data.get(1), (float)payload.data.get(2));
                 break;
             case EXTRACT:
                 break;
             case SHUFFLE:
+                ;
+                break;
+            case SYNC:
+                UUID stackId = ((List<GameObject>)payload.data.get(0)).get(0).id;
+                Log.i("VC_CLIENT", "Sync received stack: " + stackId);
+                model.setState((List<GameObject>) payload.data.get(0));
         }
+    }
+
+    @Override
+    public List<GameObject> getGameObjects() {
+        return model.getGameObjects();
+    }
+
+    @Override
+    public void setState(List<GameObject> gameObjects) {
+        model.setState(gameObjects);
     }
 
     @Override
@@ -57,7 +77,7 @@ public class VirtualCardsClient implements MessageReceiver, ModelInterface {
     public GameObject getObject(float x, float y) {
         GameObject object = model.getObject(x,y);
         if(object != null){
-            transmitter.send(NetworkData.serialize(NetworkData.Operation.GET, object.id));
+            transmitter.send(NetworkData.serialize(NetworkData.Operation.RESERVE, object.id, id));
         }
         return null;
     }
@@ -68,7 +88,7 @@ public class VirtualCardsClient implements MessageReceiver, ModelInterface {
     }
 
     @Override
-    public void reserveObject(byte player, GameObject gameObject) {
+    public void reserveObject(GameObject gameObject, byte player) {
 
     }
 

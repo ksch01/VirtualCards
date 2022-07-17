@@ -101,8 +101,6 @@ public class VirtualCardsLobby implements MessageReceiver, BluetoothNetworkEvent
             String deviceName = new String(nameBytes, StandardCharsets.UTF_8);
 
             Log.i(TAG, "Received join with device name: " + deviceName);
-            Log.w(TAG, "Next byte would have been: " + receivedBytes.get());
-            Log.w(TAG, "Message content usage indicator: " + receivedBytes.getLong());
             return;
         }
 
@@ -214,12 +212,12 @@ public class VirtualCardsLobby implements MessageReceiver, BluetoothNetworkEvent
     }
 
     private void sendStartGame(){
-        assert !isClient : "MESSAGE_START_GAME should not be send by client";
+        assert !isClient : "MESSAGE_START_GAME should not send received by client";
 
         transmitter.send(new byte[]{MESSAGE_START_GAME});
     }
 
-    private void receivedStartGame(ByteBuffer receivedBytes){
+    private void receivedStartGame(){
         assert isClient : "MESSAGE_START_GAME should not be received by server";
 
         receiveEvent(EVENT_GAME_STARTED, null, String.valueOf(playerId));
@@ -240,7 +238,7 @@ public class VirtualCardsLobby implements MessageReceiver, BluetoothNetworkEvent
                 receiveLeft(receivedBytes);
                 break;
             case MESSAGE_START_GAME:
-                receivedStartGame(receivedBytes);
+                receivedStartGame();
         }
     }
 

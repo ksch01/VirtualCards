@@ -97,9 +97,9 @@ public class BluetoothNetwork implements MessageTransmitter {
         handler = new Handler(Looper.getMainLooper()){
             @Override
             public void handleMessage(Message msg){
-                if(msg.what == HANDLER_TYPE_MESSAGE)
+                if(msg.what == HANDLER_TYPE_MESSAGE) {
                     received(ByteBuffer.wrap((byte[]) msg.obj).asReadOnlyBuffer());
-                else if(msg.what == HANDLER_TYPE_CONNECTED) {
+                }else if(msg.what == HANDLER_TYPE_CONNECTED) {
                     Object[] content = (Object[])msg.obj;
                     connectedDevice((UUID) content[0], (BluetoothDevice) content[1]);
                 }

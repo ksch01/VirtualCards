@@ -10,9 +10,15 @@ import com.example.virtualcards.network.bluetooth.interfaces.MessageReceiver;
 import com.example.virtualcards.network.bluetooth.interfaces.MessageTransmitter;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.UUID;
 
 public class VirtualCardsServer implements MessageReceiver, ModelInterface {
+
+    private static final byte ID = Byte.MIN_VALUE;
+
+    private static final long MAX_TICK = 64;
+    private long last = 0;
 
     private final MessageTransmitter transmitter;
     private final ModelInterface model;
@@ -20,19 +26,55 @@ public class VirtualCardsServer implements MessageReceiver, ModelInterface {
     public VirtualCardsServer(@NonNull MessageTransmitter transmitter){
         this.transmitter = transmitter;
         this.model = TableModel.getModel();
+
+        float x = (TableModel.WIDTH) * 0.5f;
+        float y = (TableModel.HEIGHT) * 0.5f;
+        model.moveObject(model.getObject(x,  y), x, y);
+
+        sendSync();
     }
 
     @Override
     public void receive(ByteBuffer receivedBytes) {
-        byte[] bytes = receivedBytes.array();
-        byte operator = receivedBytes.get();
-        NetworkData.Payload remoteOperation = NetworkData.deserialize(receivedBytes);
-        switch(remoteOperation.operation){
+        Payload payload = NetworkData.deserialize(receivedBytes);
+        switch(payload.operation){
             case MOVE:
-                moveObject(model.getObject(remoteOperation.getObject(0)), remoteOperation.x, remoteOperation.y);
-            case GET:
+                moveObject(model.getObject((UUID) payload.data.get(0)), (float)payload.data.get(1), (float)payload.data.get(2));
+            case RESERVE:
 
         }
+    }
+
+    private boolean isSendValid(NetworkData.Operation operation){
+        if(operation.isDispensable){
+            if(last == 0){
+                last = System.currentTimeMillis();
+                return true;
+            }else{
+                long now = System.currentTimeMillis();
+                if(now - last > MAX_TICK){
+                    last = now;
+                    return true;
+                }else{
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void sendSync(){
+        transmitter.send(NetworkData.serialize(NetworkData.Operation.SYNC, model.getGameObjects()));
+    }
+
+    @Override
+    public List<GameObject> getGameObjects() {
+        return model.getGameObjects();
+    }
+
+    @Override
+    public void setState(List<GameObject> gameObjects) {
+        model.setState(gameObjects);
     }
 
     @Override
@@ -55,16 +97,18 @@ public class VirtualCardsServer implements MessageReceiver, ModelInterface {
     }
 
     @Override
-    public void reserveObject(byte player, GameObject object) {
+    public void reserveObject(GameObject object, byte player) {
         if(object != null)return;
-        transmitter.send(NetworkData.serialize(NetworkData.Operation.GET, object.id, player));
-        model.reserveObject(player, object);
+        transmitter.send(NetworkData.serialize(NetworkData.Operation.RESERVE, object.id, player));
+        model.reserveObject(object, player);
     }
 
     @Override
     public void moveObject(GameObject object, float x, float y) {
         if(object == null)return;
-        transmitter.send(NetworkData.serialize(NetworkData.Operation.MOVE, object.id, x, y));
+        if(isSendValid(NetworkData.Operation.MOVE)) {
+            transmitter.send(NetworkData.serialize(NetworkData.Operation.MOVE, object.id, x, y));
+        }
         model.moveObject(object, x, y);
     }
 
