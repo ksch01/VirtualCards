@@ -21,7 +21,7 @@ public abstract class GameObject{
         this.width = width;
         this.height = height;
     }
-    GameObject(float x, float y, float width, float height){
+    public GameObject(float x, float y, float width, float height){
         id = UUID.randomUUID();
         setPos(x,y);
         this.width = width;
