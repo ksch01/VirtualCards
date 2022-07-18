@@ -35,7 +35,7 @@ public class TableModel implements Model {
             for(Card.Value value : Card.Value.values()){
                 Card current = new Card(centerX, centerY, suit, value);
                 if(previous != null){
-                    previous = CardStack.stackCards(current, previous);
+                    previous = CardStack.stackCards(UUID.randomUUID(), current, previous);
                 }else{
                     previous = current;
                 }
@@ -148,23 +148,53 @@ public class TableModel implements Model {
     }
 
     @Override
-    public void dropObject(GameObject object, float x, float y){
-        if(object == null)return;
-
-        //x = clampToWidth(object, x);
-        //y = clampToHeight(object, y);
+    public GameObject dropObject(GameObject object, float x, float y){
+        if(object == null)return null;
 
         if(object instanceof Card){
             GameObject stackTo = getObject(object, MAX_STACK_DISTANCE, Card.class);
             if(stackTo != null){
                 gameObjects.remove(object);
                 gameObjects.remove(stackTo);
-                gameObjects.add(CardStack.stackCards((Card) object, (Card)stackTo));
+                GameObject newStack = CardStack.stackCards(UUID.randomUUID(), (Card) object, (Card) stackTo);
+                gameObjects.add(newStack);
+
+                freeObject(object);
+                notifySubscriber();
+
+                return newStack;
             }
         }
 
         freeObject(object);
         notifySubscriber();
+
+        return null;
+    }
+
+    @Override
+    public GameObject dropObject(GameObject object, UUID id, float x, float y) {
+        if(object == null)return null;
+
+        if(object instanceof Card){
+            GameObject stackTo = getObject(object, MAX_STACK_DISTANCE, Card.class);
+            if(stackTo != null){
+                gameObjects.remove(object);
+                gameObjects.remove(stackTo);
+                GameObject newStack = CardStack.stackCards(id, (Card) object, (Card) stackTo);
+                gameObjects.add(newStack);
+
+                freeObject(object);
+                notifySubscriber();
+
+                return newStack;
+            }
+        }
+
+        freeObject(object);
+        notifySubscriber();
+
+        return null;
     }
 
     @Override

@@ -66,6 +66,7 @@ public class VirtualCardsClient implements MessageReceiver, Model {
                 }
                 break;
             case STACK:
+                model.dropObject(model.getObject((UUID) payload.data.get(0)), (UUID)payload.data.get(1), (float)payload.data.get(2), (float)payload.data.get(3));
                 break;
             case SYNC:
                 model.setState((List<GameObject>) payload.data.get(0));
@@ -122,12 +123,12 @@ public class VirtualCardsClient implements MessageReceiver, Model {
 
     @Override
     public boolean isAvailable(GameObject gameObject, byte player) {
-        return false;
+        throw new UnsupportedOperationException("Operation \"is available\" from model is not available for virtual cards client model.");
     }
 
     @Override
     public boolean reserveObject(GameObject gameObject, byte player) {
-        throw new UnsupportedOperationException("Cannot reserve objects directly on virtual cards client.");
+        throw new UnsupportedOperationException("Operation reserve from model is not available for virtual cards client model.");
     }
 
     @Override
@@ -137,9 +138,15 @@ public class VirtualCardsClient implements MessageReceiver, Model {
     }
 
     @Override
-    public void dropObject(GameObject object, float x, float y) {
+    public GameObject dropObject(GameObject object, float x, float y) {
         if(object != null)
             transmitter.send(NetworkData.serialize(NetworkData.Operation.DROP, object.id, x, y));
+        return null;
+    }
+
+    @Override
+    public GameObject dropObject(GameObject object, UUID id, float x, float y) {
+        throw new UnsupportedOperationException("Operation drop object with parameter id from model is not available for virtual cards client model.");
     }
 
     @Override

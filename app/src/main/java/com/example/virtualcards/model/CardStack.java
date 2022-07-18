@@ -17,17 +17,20 @@ public class CardStack extends Card {
     CardStack(float x, float y) {
         super(x, y, null, null);
     }
+    private CardStack(UUID id, float x, float y){
+        super(id,x,y,null,null,false);
+    }
     public CardStack(UUID id, float x, float y, @NonNull Collection<Card> cards){
         super(id, x, y,null,null, false);
         this.cards.addAll(cards);
     }
 
-    protected static CardStack stackCards(Card card, Card to){
+    protected static CardStack stackCards(UUID id, Card card, Card to){
         CardStack stack;
         if(card instanceof CardStack){
             stack = (CardStack) card;
         }else {
-            stack = new CardStack(to.x, to.y);
+            stack = new CardStack(id, to.x, to.y);
             stack.add(card);
         }
         stack.add(to);

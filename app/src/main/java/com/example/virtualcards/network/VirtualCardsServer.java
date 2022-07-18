@@ -134,10 +134,20 @@ public class VirtualCardsServer implements MessageReceiver, Model {
     }
 
     @Override
-    public void dropObject(GameObject object, float x, float y) {
-        if(object == null)return;
-        transmitter.send(NetworkData.serialize(NetworkData.Operation.DROP, object.id, x, y));
-        model.dropObject(object, x, y);
+    public GameObject dropObject(GameObject object, float x, float y) {
+        if(object == null)return null;
+        GameObject stack = model.dropObject(object, x, y);
+        if(stack == null) {
+            transmitter.send(NetworkData.serialize(NetworkData.Operation.DROP, object.id, x, y));
+        }else{
+            transmitter.send(NetworkData.serialize(NetworkData.Operation.STACK, object.id, stack.id, x, y));
+        }
+        return stack;
+    }
+
+    @Override
+    public GameObject dropObject(GameObject object, UUID id, float x, float y) {
+        throw new UnsupportedOperationException("Operation drop object of model with id parameter is not available for virtual cards server model.");
     }
 
     @Override
