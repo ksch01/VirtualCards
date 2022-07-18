@@ -5,7 +5,7 @@ import com.example.virtualcards.model.GameObject;
 import java.util.List;
 import java.util.UUID;
 
-public interface ModelInterface {
+public interface Model {
 
     List<GameObject> getGameObjects();
     void setState(List<GameObject> gameObjects);
@@ -14,7 +14,9 @@ public interface ModelInterface {
     GameObject getObject(float x, float y);
     GameObject getObject(UUID id);
 
-    void reserveObject(GameObject gameObject, byte player);
+    boolean isAvailable(GameObject gameObject, byte player);
+    boolean reserveObject(GameObject gameObject, byte player);
+
     void moveObject(GameObject object, float x, float y);
     void dropObject(GameObject object, float x, float y);
     void hitObject(GameObject object);

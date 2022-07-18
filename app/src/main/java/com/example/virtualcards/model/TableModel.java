@@ -2,7 +2,7 @@ package com.example.virtualcards.model;
 
 import android.util.Log;
 
-import com.example.virtualcards.model.interfaces.ModelInterface;
+import com.example.virtualcards.model.interfaces.Model;
 import com.example.virtualcards.model.interfaces.ModelSubscriber;
 
 import java.util.ArrayList;
@@ -11,9 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-public class TableModel implements ModelInterface {
+public class TableModel implements Model {
     public static final float HEIGHT = 360, WIDTH = HEIGHT * 2.0277777f;
-    public static final float MAX_STACK_DISTANCE = 10 * 10;
+    public static final float MAX_STACK_DISTANCE = 14 * 14;
 
     private final ArrayList<GameObject> gameObjects;
     private final Map<GameObject, Byte> reservedObjects;
@@ -116,9 +116,19 @@ public class TableModel implements ModelInterface {
     }
 
     @Override
-    public void reserveObject(GameObject gameObject, byte player) {
-        if(!reservedObjects.containsKey(gameObject))
+    public boolean isAvailable(GameObject gameObject, byte player) {
+        if(!reservedObjects.containsKey(gameObject) || reservedObjects.get(gameObject) == player)return true;
+        return false;
+    }
+
+    @Override
+    public boolean reserveObject(GameObject gameObject, byte player) {
+        if(reservedObjects.containsKey(gameObject)) {
+            return false;
+        }else {
             reservedObjects.put(gameObject, player);
+            return true;
+        }
     }
 
     private void freeObject(GameObject gameObject){
@@ -161,6 +171,8 @@ public class TableModel implements ModelInterface {
     public void hitObject(GameObject object){
         if(object == null)return;
 
+        reservedObjects.remove(object);
+
         if(object instanceof Card) {
             ((Card) object).flip();
             notifySubscriber();
@@ -176,8 +188,10 @@ public class TableModel implements ModelInterface {
             Card card = stack.popCard();
 
             if(stack.isEmpty())gameObjects.remove(stack);
+            card.setPos(stack.x, stack.y);
             gameObjects.add(card);
 
+            freeObject(stack);
             notifySubscriber();
             return card;
         }else

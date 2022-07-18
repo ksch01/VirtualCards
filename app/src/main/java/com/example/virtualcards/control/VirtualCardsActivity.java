@@ -18,7 +18,7 @@ import android.widget.Toast;
 
 import com.example.virtualcards.R;
 import com.example.virtualcards.model.TableModel;
-import com.example.virtualcards.model.interfaces.ModelInterface;
+import com.example.virtualcards.model.interfaces.Model;
 import com.example.virtualcards.network.VirtualCardsClient;
 import com.example.virtualcards.network.VirtualCardsServer;
 import com.example.virtualcards.network.bluetooth.BluetoothNetwork;
@@ -61,7 +61,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
     private final Map<UUID, View> connectedDevices = new HashMap<>();
 
     //      IN GAME VARIABLES
-    private ModelInterface model;
+    private Model model;
     private MessageReceiver connectModel;
 
 
@@ -81,7 +81,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
         network.registerMessageReceiver(this::receive);
         network.registerEventReceiver(this::networkEventOccurred);
 
-        Control.updateScreenModelRatio(this);
+        Controls.updateScreenModelRatio(this);
     }
 
     @Override
@@ -161,17 +161,25 @@ public class VirtualCardsActivity extends AppCompatActivity{
 
     private void setContentViewGame(byte playerId){
 
+        model = TableModel.getModel();
+
+        Controls controls;
+
         if(isClient){
-            VirtualCardsClient clientModel = new VirtualCardsClient(network, playerId);
+            VirtualCardsClient clientModel = new VirtualCardsClient(model, network, playerId);
+            controls = new Controls(clientModel);
+            clientModel.setControls(controls);
             this.connectModel = clientModel;
             model = clientModel;
         }else{
-            VirtualCardsServer serverModel = new VirtualCardsServer(network);
+            VirtualCardsServer serverModel = new VirtualCardsServer(model, network);
+            controls = new Controls(serverModel);
             this.connectModel = serverModel;
             model = serverModel;
         }
 
-        view = new VirtualCardsView(this, Control.getControl(model));
+        view = new VirtualCardsView(this, controls);
+
         model.subscribeView(view.getSubscriber());
 
         if(!isClient){
@@ -243,8 +251,6 @@ public class VirtualCardsActivity extends AppCompatActivity{
             connectedDevice = true;
         }
     }
-
-
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //      SYSTEM UI ON CLICKS
@@ -359,6 +365,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
                 break;
 
             case VirtualCardsLobby.EVENT_LEFT:
+                View view = connectedDevices.get(deviceId);
                 connectedDeviceView.removeView(connectedDevices.get(deviceId));
                 break;
 
@@ -420,7 +427,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
 
     private void disconnectedDevice(){
         if(isClient) {
-            if (!(currentScreen == Screen.GAME)) {
+            if (currentScreen != Screen.GAME) {
                 if (!leftLobby)
                     Toast.makeText(this, R.string.info_lobby_closed, Toast.LENGTH_LONG).show();
                 else

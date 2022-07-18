@@ -1,12 +1,10 @@
 package com.example.virtualcards.network;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
 import com.example.virtualcards.model.GameObject;
 import com.example.virtualcards.model.TableModel;
-import com.example.virtualcards.model.interfaces.ModelInterface;
+import com.example.virtualcards.model.interfaces.Model;
 import com.example.virtualcards.model.interfaces.ModelSubscriber;
 import com.example.virtualcards.network.bluetooth.interfaces.MessageReceiver;
 import com.example.virtualcards.network.bluetooth.interfaces.MessageTransmitter;
@@ -15,7 +13,8 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.UUID;
 
-public class VirtualCardsServer implements MessageReceiver, ModelInterface {
+//TODO optimize response to clients on network when client messages have to be mirrored
+public class VirtualCardsServer implements MessageReceiver, Model {
 
     private static final byte ID = Byte.MIN_VALUE;
 
@@ -23,11 +22,11 @@ public class VirtualCardsServer implements MessageReceiver, ModelInterface {
     private long last = 0;
 
     private final MessageTransmitter transmitter;
-    private final ModelInterface model;
+    private final Model model;
 
-    public VirtualCardsServer(@NonNull MessageTransmitter transmitter){
+    public VirtualCardsServer(@NonNull Model model, @NonNull MessageTransmitter transmitter){
         this.transmitter = transmitter;
-        this.model = TableModel.getModel();
+        this.model = model;
 
         float x = (TableModel.WIDTH) * 0.5f;
         float y = (TableModel.HEIGHT) * 0.5f;
@@ -42,6 +41,15 @@ public class VirtualCardsServer implements MessageReceiver, ModelInterface {
         switch(payload.operation){
             case MOVE:
                 moveObject(model.getObject((UUID) payload.data.get(0)), (float)payload.data.get(1), (float)payload.data.get(2));
+                break;
+            case DROP:
+                dropObject(model.getObject((UUID) payload.data.get(0)), (float)payload.data.get(1), (float)payload.data.get(2));
+                break;
+            case HIT:
+                hitObject(model.getObject((UUID) payload.data.get(0)));
+                break;
+            case EXTRACT:
+                extractObject(model.getObject((UUID) payload.data.get(0)), (byte) payload.data.get(1));
                 break;
             case RESERVE:
                 reserveObject(model.getObject((UUID) payload.data.get(0)), (byte)payload.data.get(1));
@@ -88,8 +96,11 @@ public class VirtualCardsServer implements MessageReceiver, ModelInterface {
     @Override
     public GameObject getObject(float x, float y) {
         GameObject gameObject = model.getObject(x, y);
-        reserveObject(gameObject, ID);
-        return gameObject;
+        if(reserveObject(gameObject, ID)){
+            return gameObject;
+        }else{
+            return null;
+        }
     }
 
     @Override
@@ -98,10 +109,19 @@ public class VirtualCardsServer implements MessageReceiver, ModelInterface {
     }
 
     @Override
-    public void reserveObject(GameObject object, byte player) {
-        if(object == null)return;
-        transmitter.send(NetworkData.serialize(NetworkData.Operation.RESERVE, object.id, player));
-        model.reserveObject(object, player);
+    public boolean isAvailable(GameObject gameObject, byte player) {
+        return model.isAvailable(gameObject, player);
+    }
+
+    @Override
+    public boolean reserveObject(GameObject object, byte player) {
+        if(object == null)return false;
+        if(model.reserveObject(object,player)){
+            transmitter.send(NetworkData.serialize(NetworkData.Operation.RESERVE, object.id, player));
+            return true;
+        }else{
+            return false;
+        }
     }
 
     @Override
@@ -129,10 +149,15 @@ public class VirtualCardsServer implements MessageReceiver, ModelInterface {
 
     @Override
     public GameObject extractObject(GameObject object) {
+        return extractObject(object, ID);
+    }
+
+    private GameObject extractObject(GameObject object, byte player){
         if(object == null)return null;
         GameObject extracted = model.extractObject(object);
         if(extracted != null){
-            transmitter.send(NetworkData.serialize(NetworkData.Operation.EXTRACT, object.id, extracted.id));
+            transmitter.send(NetworkData.serialize(NetworkData.Operation.EXTRACT, object.id, player));
+            model.reserveObject(extracted, player);
         }
         return extracted;
     }

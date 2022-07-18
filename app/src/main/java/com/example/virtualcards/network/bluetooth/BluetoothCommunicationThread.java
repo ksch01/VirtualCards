@@ -83,7 +83,7 @@ class BluetoothCommunicationThread extends Thread{
                             message = readMessage(buffer, messageLength, offset);
                             offset += messageLength;
                             if (msgDirect) {
-                                network.receivedDirect(this, buffer);
+                                network.receivedDirect(this, message);
                             } else {
                                 handler.obtainMessage(BluetoothNetwork.HANDLER_TYPE_MESSAGE, message.length, -1, message).sendToTarget();
                             }

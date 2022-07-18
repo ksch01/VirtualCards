@@ -6,12 +6,15 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.WindowManager;
 
+import androidx.annotation.NonNull;
+
 import com.example.virtualcards.model.GameObject;
 import com.example.virtualcards.model.TableModel;
-import com.example.virtualcards.model.interfaces.ModelInterface;
+import com.example.virtualcards.model.interfaces.Model;
 import com.example.virtualcards.view.MotionControl;
 
-public class Control implements MotionControl {
+//TODO fix x error, game objects may be selected with an offset where actually was pressed on the x axis
+public class Controls implements MotionControl {
 
     public static final float DEFAULT_DISPLAY_WIDTH = 1920, DEFAULT_DISPLAY_HEIGHT = 1080;
     public static final float DEFAULT_RATIO_WIDTH = TableModel.WIDTH / DEFAULT_DISPLAY_WIDTH, DEFAULT_RATIO_HEIGHT = TableModel.HEIGHT / DEFAULT_DISPLAY_HEIGHT;
@@ -31,20 +34,12 @@ public class Control implements MotionControl {
      */
     private static final long ACTION_TIME = 100;
 
-    private static Control instance;
-    private ModelInterface model;
-    private GameObject selectedObject;
-    private static float[] ratio = new float[]{DEFAULT_RATIO_WIDTH,DEFAULT_RATIO_HEIGHT};;
+    private final Model model;
+    private GameObject controlledObject;
+    private static final float[] ratio = new float[]{DEFAULT_RATIO_WIDTH,DEFAULT_RATIO_HEIGHT};;
 
-    private Control(ModelInterface model){
-        if(model == null)throw new IllegalArgumentException("Model is not allowed to be null.");
+    public Controls(@NonNull Model model){
         this.model = model;
-    }
-
-    public static Control getControl(ModelInterface model){
-        if(instance == null)
-            instance = new Control(model);
-        return instance;
     }
 
     private long selectedTime;
@@ -59,11 +54,11 @@ public class Control implements MotionControl {
         switch(e.getAction()){
             case MotionEvent.ACTION_MOVE:
 
-                if(moved == false){
+                if(!moved){
                     if(System.currentTimeMillis() - selectedTime >= EXTRACTION_TIME){
-                        GameObject extracted = model.extractObject(selectedObject);
+                        GameObject extracted = model.extractObject(controlledObject);
                         if(extracted != null)
-                            selectedObject = extracted;
+                            controlledObject = extracted;
                         moved = true;
                     }else{
                         float dx = lastX - x;
@@ -76,7 +71,7 @@ public class Control implements MotionControl {
                         }
                     }
                 }
-                model.moveObject(selectedObject, x, y);
+                model.moveObject(controlledObject, x, y);
 
                 break;
 
@@ -85,17 +80,17 @@ public class Control implements MotionControl {
                 selectedTime = System.currentTimeMillis();
                 lastX = x;
                 lastY = y;
-                selectedObject = model.getObject(x,y);
+                controlledObject = model.getObject(x,y);
                 break;
 
             case MotionEvent.ACTION_UP:
 
                 if(System.currentTimeMillis() - selectedTime <= ACTION_TIME){
-                    model.hitObject(selectedObject);
+                    model.hitObject(controlledObject);
                 }else{
-                    model.dropObject(selectedObject, x, y);
+                    model.dropObject(controlledObject, x, y);
                 }
-                selectedObject = null;
+                controlledObject = null;
                 moved = false;
                 break;
         }
@@ -103,7 +98,7 @@ public class Control implements MotionControl {
     }
 
     public void obtainObjectAsynchronously(GameObject gameObject){
-        this.selectedObject = gameObject;
+        this.controlledObject = gameObject;
     }
 
     private static float modelX(float screenX){
@@ -120,7 +115,6 @@ public class Control implements MotionControl {
         float pixelWidth = metrics.widthPixels;
         float pixelHeight = metrics.heightPixels;
 
-        //TODO fix width fault on certain devices
         ratio[0] = TableModel.WIDTH / pixelWidth * MAGIC_WIDTH_FAULT_KILLER;
         ratio[1] = TableModel.HEIGHT / pixelHeight;
         Log.i("Control", "Mapped screen model ratio ("+ratio[0]+", "+ratio[1]+") with screen pixels ("+pixelWidth+", "+pixelHeight+")");

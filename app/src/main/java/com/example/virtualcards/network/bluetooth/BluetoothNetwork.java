@@ -29,9 +29,11 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
+//TODO make paired devices available without having to run discovery
+//TODO implement reaction to denial of permission in Control component
+//TODO implement reaction to disabling bluetooth by user at runtime in Control component
 public class BluetoothNetwork implements MessageTransmitter {
 
     private static final String LOG_TAG = "BluetoothNetwork";
@@ -137,9 +139,6 @@ public class BluetoothNetwork implements MessageTransmitter {
     protected Handler getHandler() {
         return handler;
     }
-
-    //TODO implement reaction to denial of permission in Control component
-    //TODO implement reaction to disabling bluetooth by user at runtime in Control component
 
     /**
      * Enables the bluetooth Adapter if not already enabled.

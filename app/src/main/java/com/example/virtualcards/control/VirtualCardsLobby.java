@@ -109,8 +109,6 @@ public class VirtualCardsLobby implements MessageReceiver, BluetoothNetworkEvent
         String deviceName = new String(nameBytes, StandardCharsets.UTF_8);
 
         Log.i(TAG, "Received join with device name: " + deviceName);
-        Log.w(TAG, "Message content usage indicator: " + receivedBytes.getLong());
-        Log.w(TAG, "Next byte would have been: " + receivedBytes.get());
         receiveEvent(EVENT_JOINED, id, new String(nameBytes, StandardCharsets.UTF_8));
     }
 
@@ -122,14 +120,12 @@ public class VirtualCardsLobby implements MessageReceiver, BluetoothNetworkEvent
                 .putLong(id.getMostSignificantBits())
                 .putLong(id.getLeastSignificantBits());
 
-        Log.d(TAG, "Disconnected sent.");
         transmitter.send(messageBuffer.array());
     }
 
     private void receiveLeft(ByteBuffer receivedBytes){
         assert isClient : "MESSAGE_LEFT should not be received by server";
 
-        Log.d(TAG, "Disconnected received.");
 
         UUID id = new UUID(receivedBytes.getLong(), receivedBytes.getLong());
         receiveEvent(EVENT_LEFT, id, clients.get(id));

@@ -18,8 +18,8 @@ class NetworkData {
         MOVE((byte)1, PayloadType.GAME_OBJECT_AND_COORDINATES, true),
         DROP((byte)2, PayloadType.GAME_OBJECT_AND_COORDINATES, false),
         HIT((byte)3, PayloadType.GAME_OBJECT, false),
-        SHUFFLE((byte)4, PayloadType.GAME_OBJECTS, false),
-        EXTRACT((byte)5, PayloadType.GAME_OBJECTS, false),
+        STACK((byte)4, PayloadType.GAME_OBJECTS, false),
+        EXTRACT((byte)5, PayloadType.GAME_OBJECT_AND_PLAYER, false),
         SYNC((byte)6, PayloadType.GAME_OBJECTS_FULL, false);
 
         Operation(byte id, PayloadType payload, boolean optional){
@@ -33,7 +33,7 @@ class NetworkData {
                 case 1: return MOVE;
                 case 2: return DROP;
                 case 3: return HIT;
-                case 4: return SHUFFLE;
+                case 4: return STACK;
                 case 5: return EXTRACT;
                 case 6: return SYNC;
             }

@@ -22,14 +22,14 @@ public abstract class GameObject{
         this.width = width;
         this.height = height;
     }
-    GameObject(float x, float y, float width, float height){
+    protected GameObject(float x, float y, float width, float height){
         id = UUID.randomUUID();
         setPos(x,y);
         this.width = width;
         this.height = height;
     }
 
-    void setPos(float x, float y){
+    protected void setPos(float x, float y){
         this.x = x;
         this.y = y;
     }
