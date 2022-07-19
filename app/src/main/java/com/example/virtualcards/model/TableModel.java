@@ -153,6 +153,11 @@ public class TableModel implements Model {
     public GameObject dropObject(GameObject object, float x, float y){
         if(object == null)return null;
 
+        x = clampToWidth(object, x - object.width * 0.5f);
+        y = clampToHeight(object, y - object.height * 0.5f);
+
+        object.setPos(x,y);
+
         if(object instanceof Card){
             GameObject stackTo = getObject(object, MAX_STACK_DISTANCE, Card.class);
             if(stackTo != null){
@@ -177,6 +182,11 @@ public class TableModel implements Model {
     @Override
     public GameObject dropObject(GameObject object, UUID id, float x, float y) {
         if(object == null)return null;
+
+        x = clampToWidth(object, x - object.width * 0.5f);
+        y = clampToHeight(object, y - object.height * 0.5f);
+
+        object.setPos(x,y);
 
         if(object instanceof Card){
             GameObject stackTo = getObject(object, MAX_STACK_DISTANCE, Card.class);
@@ -219,8 +229,10 @@ public class TableModel implements Model {
             CardStack stack = (CardStack)object;
             Card card = stack.popCard();
 
-            if(stack.isEmpty())gameObjects.remove(stack);
-            card.setPos(stack.x, stack.y);
+            if(stack.isEmpty()) {
+                gameObjects.add(stack.popCard());
+                gameObjects.remove(stack);
+            }
             gameObjects.add(card);
 
             freeObject(stack);

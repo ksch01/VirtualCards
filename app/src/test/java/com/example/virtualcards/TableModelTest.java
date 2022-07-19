@@ -15,9 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class ModelTest {
+public class TableModelTest {
 
     Card card1, card2, card3;
+    Card stackedCard1, stackedCard2;
     CardStack stack1;
     Model model;
     UUID card3Id = UUID.fromString("97f038dd-0eef-4939-9774-aed90de325f8");
@@ -28,15 +29,18 @@ public class ModelTest {
         List<GameObject> modelState = new ArrayList<>();
 
         card1 = new Card(0, 0, Card.Suit.CLUBS, Card.Value.ACE);
-        card2 = new Card(100, 90, Card.Suit.DIAMONDS, Card.Value.EIGHT);
+        card2 = new Card(0, 60, Card.Suit.DIAMONDS, Card.Value.EIGHT);
         card3 = new Card(card3Id, 100, 100, Card.Suit.HEARTS, Card.Value.TWO, true);
         modelState.add(card1);
         modelState.add(card2);
         modelState.add(card3);
 
+        stackedCard1 = new Card(0, 100, Card.Suit.SPADES, Card.Value.ACE);
+        stackedCard2 = new Card(50, 55, Card.Suit.SPADES, Card.Value.JACK);
+
         List<Card> cardList = new ArrayList<>();
-            cardList.add(new Card(0, 100, Card.Suit.SPADES, Card.Value.ACE));
-            cardList.add(new Card(50, 55, Card.Suit.SPADES, Card.Value.JACK));
+            cardList.add(stackedCard1);
+            cardList.add(stackedCard2);
         stack1 = new CardStack(stack1Id, 200, 200, cardList);
         modelState.add(stack1);
 
@@ -61,6 +65,13 @@ public class ModelTest {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //      SUBSCRIBE VIEW TESTS
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    @Test
+    public void subscribeNullTest(){
+        model.subscribeView(null);
+
+        model.moveObject(card1, 100, 100);
+    }
 
     @Test
     public void subscribeDirectTest(){
@@ -141,7 +152,7 @@ public class ModelTest {
     public void getObjectIdWrongTest(){
         GameObject actual = model.getObject(UUID.randomUUID());
 
-        assertEquals(null, actual);
+        assertNull(actual);
     }
 
     @Test
@@ -163,7 +174,7 @@ public class ModelTest {
     @Test
     public void getObjectCloseTest(){
         GameObject expected = card2;
-        GameObject actual = model.getObject(110, 95);
+        GameObject actual = model.getObject(0, 90);
 
         assertEquals(expected, actual);
     }
@@ -180,7 +191,14 @@ public class ModelTest {
     public void getObjectFailedEdgeTest(){
         GameObject actual = model.getObject(100 + Card.WIDTH, 100 + Card.HEIGHT);
 
-        assertEquals(null, actual);
+        assertNull(actual);
+    }
+
+    @Test
+    public void getObjectOutsideModelTest(){
+        GameObject actual = model.getObject(1000, 1000);
+
+        assertNull(actual);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -237,4 +255,91 @@ public class ModelTest {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //      DROP OBJECT TEST
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    @Test
+    public void dropObjectNullTest(){
+        assertNull(model.dropObject(card1, 120, 60));
+    }
+
+    @Test
+    public void dropObjectValidTest(){
+        assertNull(model.dropObject(card1, 120, 60));
+
+        assertEquals(120 - (Card.WIDTH * 0.5), card1.getX(), 0);
+        assertEquals(60 - (Card.HEIGHT * 0.5), card1.getY(), 0);
+    }
+
+    @Test
+    public void dropObjectStackTest(){
+        CardStack newStack = (CardStack) model.dropObject(card1, 0, (float) (50 + (Card.HEIGHT * 0.5)));
+
+        assertEquals(card1.getSuit(), newStack.getSuit());
+        assertEquals(card1.getValue(), newStack.getValue());
+
+        newStack.popCard();
+
+        assertEquals(card2.getValue(), newStack.getValue());
+        assertEquals(card2.getSuit(), newStack.getSuit());
+    }
+
+    @Test
+    public void dropObjectStackIdTest(){
+        UUID id = UUID.fromString("ebc1fbbe-930e-4ff5-a75b-8a41e9861222");
+
+        CardStack newStack = (CardStack) model.dropObject(card1, id, 0, (float) (50 + (Card.HEIGHT * 0.5)));
+
+        assertEquals(id, newStack.id);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //      HIT OBJECT TEST
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    @Test
+    public void hitObjectNullTest(){
+        model.hitObject(null);
+    }
+
+    @Test
+    public void hitObjectCardTest(){
+        assertFalse(card1.isFaceUp());
+        model.hitObject(card1);
+        assertTrue(card1.isFaceUp());
+        model.hitObject(card1);
+        assertFalse(card1.isFaceUp());
+    }
+
+    @Test
+    public void hitObjectStackTest(){
+        assertFalse(stack1.isFaceUp());
+        assertEquals(stackedCard1.getSuit(), stack1.getSuit());
+        assertEquals(stackedCard1.getValue(), stack1.getValue());
+
+        model.hitObject(stack1);
+        assertTrue(stack1.isFaceUp());
+        assertEquals(stackedCard2.getSuit(), stack1.getSuit());
+        assertEquals(stackedCard2.getValue(), stack1.getValue());
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //      EXTRACT OBJECT TEST
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    @Test
+    public void extractObjectNullTest(){
+        assertNull(model.extractObject(null));
+    }
+
+    @Test
+    public void extractObjectCardTest(){
+        assertNull(model.extractObject(card3));
+    }
+
+    @Test
+    public void extractObjectStackTest(){
+        GameObject card = model.extractObject(stack1);
+        assertEquals(stackedCard1, card);
+
+        assertFalse(model.getGameObjects().contains(stack1));
+    }
 }

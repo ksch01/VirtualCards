@@ -64,11 +64,12 @@ public class CardStack extends Card {
     public Card popCard(){
         Card card = cards.get(0);
         cards.remove(0);
+        card.setPos(x,y);
         return card;
     }
 
     protected boolean isEmpty(){
-        return cards.isEmpty();
+        return cards.size() < 2;
     }
 
     @Override

@@ -1,5 +1,10 @@
 package com.example.virtualcards.network.bluetooth;
 
+import static com.example.virtualcards.network.bluetooth.interfaces.NetworkEventReceiver.EVENT_CODE_CONNECTED;
+import static com.example.virtualcards.network.bluetooth.interfaces.NetworkEventReceiver.EVENT_CODE_CONNECTION_FAILED;
+import static com.example.virtualcards.network.bluetooth.interfaces.NetworkEventReceiver.EVENT_CODE_DISCONNECTED;
+import static com.example.virtualcards.network.bluetooth.interfaces.NetworkEventReceiver.EVENT_CODE_DISCOVERED;
+
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
@@ -20,7 +25,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
-import com.example.virtualcards.network.bluetooth.interfaces.BluetoothNetworkEventReceiver;
+import com.example.virtualcards.network.bluetooth.interfaces.NetworkEventReceiver;
 import com.example.virtualcards.network.bluetooth.interfaces.MessageReceiver;
 import com.example.virtualcards.network.bluetooth.interfaces.MessageTransmitter;
 
@@ -42,14 +47,6 @@ public class BluetoothNetwork implements MessageTransmitter {
     public static final UUID BLUETOOTH_ID = UUID.fromString("8af00d14-3643-40ac-a34d-ea501d77f660");
 
     public static final UUID DEVICE_NETWORK_ID = UUID.randomUUID();
-
-    /**
-     * Event codes for {@link BluetoothNetworkEventReceiver}
-     */
-    public static final int EVENT_CODE_DISCOVERED = 0,
-        EVENT_CODE_CONNECTED = 1,
-        EVENT_CODE_DISCONNECTED = 2,
-        EVENT_CODE_CONNECTION_FAILED = 3;
 
     /**
      * Permission request codes
@@ -77,7 +74,7 @@ public class BluetoothNetwork implements MessageTransmitter {
     private BluetoothServerThread serverThread = null;
     private BluetoothClientThread clientThread = null;
 
-    private BluetoothNetworkEventReceiver eventReceiver;
+    private NetworkEventReceiver eventReceiver;
     private MessageReceiver messageReceiver;
 
     private boolean openServer = false;
@@ -180,7 +177,7 @@ public class BluetoothNetwork implements MessageTransmitter {
         activity.requestPermissions(permissions.toArray(new String[0]), REQUEST_BLUETOOTH_ALL);
     }
 
-    public void registerEventReceiver(BluetoothNetworkEventReceiver eventReceiver) {
+    public void registerEventReceiver(NetworkEventReceiver eventReceiver) {
         this.eventReceiver = eventReceiver;
     }
 

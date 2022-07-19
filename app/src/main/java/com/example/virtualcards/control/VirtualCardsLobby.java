@@ -8,7 +8,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 
 import com.example.virtualcards.network.bluetooth.BluetoothNetwork;
-import com.example.virtualcards.network.bluetooth.interfaces.BluetoothNetworkEventReceiver;
+import com.example.virtualcards.network.bluetooth.interfaces.NetworkEventReceiver;
 import com.example.virtualcards.network.bluetooth.interfaces.MessageReceiver;
 import com.example.virtualcards.network.bluetooth.interfaces.MessageTransmitter;
 import com.example.virtualcards.util.ByteIdPool;
@@ -22,7 +22,7 @@ import java.util.UUID;
 //TODO remove assertions after validation
 //TODO free byte ids of disconnected devices
 //TODO do something when there is no more space in the lobby and someone is trying to connect
-public class VirtualCardsLobby implements MessageReceiver, BluetoothNetworkEventReceiver {
+public class VirtualCardsLobby implements MessageReceiver, NetworkEventReceiver {
 
     public static final String TAG = "VirtualCardsLobby";
 
@@ -241,13 +241,13 @@ public class VirtualCardsLobby implements MessageReceiver, BluetoothNetworkEvent
     @Override
     public void receive(int eventCode, UUID receiverId, BluetoothDevice device) {
         switch (eventCode){
-            case BluetoothNetwork.EVENT_CODE_CONNECTED:
+            case NetworkEventReceiver.EVENT_CODE_CONNECTED:
                 if(!isClient) {
                     sendLobbyInfo(receiverId);
                 }
                 break;
 
-            case BluetoothNetwork.EVENT_CODE_DISCONNECTED:
+            case NetworkEventReceiver.EVENT_CODE_DISCONNECTED:
                 if(!isClient){
 
                     sendLeft(receiverId);

@@ -115,7 +115,6 @@ class NetworkData {
                     gameObject = getCardStack(buffer, objectSize, id ,x ,y);
             }
 
-            Log.e("DESERIALIZE", "---> deserialized object with id " + ((GameObject)gameObject).id);
             objects.add(gameObject);
         }
 
@@ -140,9 +139,6 @@ class NetworkData {
         List<Card> cards = new ArrayList<>();
         int position = buffer.position();
         byteSize -= GameObject.BYTE_SIZE + 1;
-
-        Log.e("DESERIALIZE", "Card Stack id was " + id);
-
 
         while(buffer.position() - position < byteSize){
 
@@ -237,7 +233,6 @@ class NetworkData {
     static byte[] serialize(Operation operation, List<GameObject> gameObjects){
         assert operation.payload == PayloadType.GAME_OBJECTS_FULL : "Get data for operation \""+operation.name()+"\" called for wrong parameters.";
 
-        Log.e("SERIALIZE", "Serialize object with id " + gameObjects.get(0).id + ", serialized " + gameObjects.size() + " object(s).");
         byte[] gameObjectsBytes = GameObject.getMultipleBytes(gameObjects);
         byte[] data = new byte[gameObjectsBytes.length + 1];
         ByteBuffer buffer = ByteBuffer.wrap(data);

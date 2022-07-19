@@ -23,6 +23,7 @@ import com.example.virtualcards.network.VirtualCardsClient;
 import com.example.virtualcards.network.VirtualCardsServer;
 import com.example.virtualcards.network.bluetooth.BluetoothNetwork;
 import com.example.virtualcards.network.bluetooth.interfaces.MessageReceiver;
+import com.example.virtualcards.network.bluetooth.interfaces.NetworkEventReceiver;
 import com.example.virtualcards.view.VirtualCardsView;
 
 import java.io.IOException;
@@ -394,24 +395,24 @@ public class VirtualCardsActivity extends AppCompatActivity{
 
     public void networkEventOccurred(int event, UUID deviceId, BluetoothDevice device){
         switch(event){
-            case BluetoothNetwork.EVENT_CODE_DISCOVERED:
+            case NetworkEventReceiver.EVENT_CODE_DISCOVERED:
                 discoveredDevice(device);
                 break;
 
-            case BluetoothNetwork.EVENT_CODE_CONNECTED:
+            case NetworkEventReceiver.EVENT_CODE_CONNECTED:
                 if(!isClient)
                     lobby.receive(event, deviceId, device);
                 else
                     setContentViewLobby();
                 break;
 
-            case BluetoothNetwork.EVENT_CODE_DISCONNECTED:
+            case NetworkEventReceiver.EVENT_CODE_DISCONNECTED:
                 if(!isClient)
                     lobby.receive(event, deviceId, device);
                 disconnectedDevice();
                 break;
 
-            case BluetoothNetwork.EVENT_CODE_CONNECTION_FAILED:
+            case NetworkEventReceiver.EVENT_CODE_CONNECTION_FAILED:
                 connectionFailed(device);
         }
     }
