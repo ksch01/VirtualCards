@@ -2,12 +2,13 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mainMenuView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".control.VirtualCardsActivity">
 
     <Button
-        android:id="@+id/button6"
+        android:id="@+id/buttonHost"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:onClick="host"
@@ -15,29 +16,29 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/button7" />
+        app:layout_constraintTop_toBottomOf="@+id/buttonJoin" />
 
     <Button
-        android:id="@+id/button7"
+        android:id="@+id/buttonJoin"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:onClick="join"
         android:text="@string/btn_join"
-        app:layout_constraintBottom_toTopOf="@+id/button6"
-        app:layout_constraintEnd_toEndOf="@+id/button6"
-        app:layout_constraintStart_toStartOf="@+id/button6"
-        app:layout_constraintTop_toBottomOf="@+id/button8" />
+        app:layout_constraintBottom_toTopOf="@+id/buttonHost"
+        app:layout_constraintEnd_toEndOf="@+id/buttonHost"
+        app:layout_constraintStart_toStartOf="@+id/buttonHost"
+        app:layout_constraintTop_toBottomOf="@+id/buttonDemo" />
 
     <Button
-        android:id="@+id/button8"
+        android:id="@+id/buttonDemo"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:onClick="demo"
         android:text="@string/btn_demo"
-        app:layout_constraintBottom_toTopOf="@+id/button7"
-        app:layout_constraintEnd_toEndOf="@+id/button7"
-        app:layout_constraintStart_toStartOf="@+id/button7"
+        app:layout_constraintBottom_toTopOf="@+id/buttonJoin"
+        app:layout_constraintEnd_toEndOf="@+id/buttonJoin"
+        app:layout_constraintStart_toStartOf="@+id/buttonJoin"
         app:layout_constraintTop_toTopOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

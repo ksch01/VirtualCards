@@ -363,6 +363,7 @@ public class BluetoothNetwork implements MessageTransmitter {
     public void onDestroy(){
         for(BroadcastReceiver receiver : broadcastReceivers){
             activity.unregisterReceiver(receiver);
+            broadcastReceivers.remove(receiver);
         }
     }
 }

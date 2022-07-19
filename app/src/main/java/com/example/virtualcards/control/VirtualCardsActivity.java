@@ -144,7 +144,7 @@ public class VirtualCardsActivity extends AppCompatActivity{
         lobby.registerEventReceiver(this::LobbyEventOccurred);
 
         connectedDeviceView = findViewById(R.id.connectedDevices);
-        connectedInfoView = findViewById(R.id.connectedInfoView);
+        connectedInfoView = findViewById(R.id.connectedInfo);
 
         ConstraintLayout serverButtons = findViewById(R.id.serverButtons);
         ConstraintLayout clientButtons = findViewById(R.id.clientButtons);
