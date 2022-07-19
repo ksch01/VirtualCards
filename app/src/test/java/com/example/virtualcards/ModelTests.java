@@ -12,8 +12,6 @@ import com.example.virtualcards.model.TableModel;
 
 public class ModelTests {
     Card firstExampleCard;
-    CardStack firstExampleCardStack;
-    GameObject firstExampleGameObject;
     TableModel firstExampleModel;
 
     @Test
@@ -26,17 +24,6 @@ public class ModelTests {
         assertEquals(firstExampleCard.getX(), 0,0);
         assertEquals(firstExampleCard.getY(), 0,0);
     }
-
-/*    @Test
-    public void cardStackConstructorTest() {
-        firstExampleCardStack = new CardStack(0,0, Card.Suit.DIAMONDS, Card.Value.TWO);
-
-        assertEquals(firstExampleCardStack.getSuit(), Card.Suit.DIAMONDS);
-        assertEquals(firstExampleCardStack.getValue(), Card.Value.TWO);
-        assertFalse(firstExampleCardStack.isFaceUp());
-        assertEquals(firstExampleCardStack.getX(), 0,0);
-        assertEquals(firstExampleCardStack.getY(), 0,0);
-    }*/
 
     @Test
     public void modelInitializeTest() {

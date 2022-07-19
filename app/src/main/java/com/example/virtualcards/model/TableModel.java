@@ -59,8 +59,8 @@ public class TableModel implements Model {
 
     @Override
     public void setState(List<GameObject> gameObjects) {
-        Log.i("SET_MODEL_STATE", "Set model state called with game objects: " + gameObjects + " (" + gameObjects.size()+")");
         this.gameObjects.clear();
+        reservedObjects.clear();
         this.gameObjects.addAll(gameObjects);
         notifySubscriber();
     }
@@ -117,12 +117,14 @@ public class TableModel implements Model {
 
     @Override
     public boolean isAvailable(GameObject gameObject, byte player) {
+        if(gameObject == null)return false;
         if(!reservedObjects.containsKey(gameObject) || reservedObjects.get(gameObject) == player)return true;
         return false;
     }
 
     @Override
     public boolean reserveObject(GameObject gameObject, byte player) {
+        if(gameObject == null)return false;
         if(reservedObjects.containsKey(gameObject)) {
             return false;
         }else {

@@ -22,6 +22,7 @@ public class CardStack extends Card {
     }
     public CardStack(UUID id, float x, float y, @NonNull Collection<Card> cards){
         super(id, x, y,null,null, false);
+        if(cards.size() < 2)throw new IllegalArgumentException("Can not create card stack with less then two cards.");
         this.cards.addAll(cards);
     }
 
